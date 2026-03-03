@@ -33,6 +33,23 @@ Download the appropriate binary for your platform from the [releases page](https
 
 ## Quick Start
 
+### Creating from Template
+
+1. Click the green **"Use this template"** button on GitHub, or clone and run:
+   ```bash
+   git clone https://github.com/{{OWNER}}/{{APPNAME}}.git my-cli
+   cd my-cli
+   ./scripts/setup.sh
+   ```
+
+2. Follow the setup prompts, then see **[SETUP_GUIDE.md](SETUP_GUIDE.md)** for:
+   - GitHub repository configuration
+   - Enabling automated releases
+   - First release checklist
+   - pkg.go.dev registration
+
+### Example Commands
+
 ```bash
 # Show help
 {{APPNAME}} --help
