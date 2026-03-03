@@ -1,4 +1,4 @@
-module github.com/dl-alexandre/go-cli-template
+module github.com/dl-alexandre/cli-template
 
 go 1.24.0
 

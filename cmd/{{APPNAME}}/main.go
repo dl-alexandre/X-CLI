@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
-	"github.com/dl-alexandre/go-cli-template/internal/cli"
+	"github.com/dl-alexandre/cli-template/internal/cli"
 )
 
 var (

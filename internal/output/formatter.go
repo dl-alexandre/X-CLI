@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/rodaine/table"
-	"github.com/dl-alexandre/go-cli-template/internal/api"
+	"github.com/dl-alexandre/cli-template/internal/api"
 )
 
 // Printer handles output formatting

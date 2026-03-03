@@ -7,10 +7,10 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/mattn/go-isatty"
-	"github.com/dl-alexandre/go-cli-template/internal/api"
-	"github.com/dl-alexandre/go-cli-template/internal/cache"
-	"github.com/dl-alexandre/go-cli-template/internal/config"
-	"github.com/dl-alexandre/go-cli-template/internal/output"
+	"github.com/dl-alexandre/cli-template/internal/api"
+	"github.com/dl-alexandre/cli-template/internal/cache"
+	"github.com/dl-alexandre/cli-template/internal/config"
+	"github.com/dl-alexandre/cli-template/internal/output"
 )
 
 // CLI is the main command-line interface structure using Kong
