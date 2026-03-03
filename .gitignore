@@ -32,8 +32,9 @@ vendor/
 config.yaml
 !config.example.yaml
 
-# Cache
-cache/
+# Cache (runtime cache dir, not internal/cache package)
+/cache/
+!internal/cache/
 
 # GoReleaser
 dist/
