@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/rodaine/table"
 	"github.com/dl-alexandre/cli-template/internal/api"
+	"github.com/rodaine/table"
 )
 
 // Printer handles output formatting
