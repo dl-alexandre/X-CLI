@@ -6,22 +6,23 @@ import (
 	"os"
 
 	"github.com/alecthomas/kong"
-	"github.com/mattn/go-isatty"
 	"github.com/dl-alexandre/cli-template/internal/api"
 	"github.com/dl-alexandre/cli-template/internal/cache"
 	"github.com/dl-alexandre/cli-template/internal/config"
 	"github.com/dl-alexandre/cli-template/internal/output"
+	"github.com/mattn/go-isatty"
 )
 
 // CLI is the main command-line interface structure using Kong
 type CLI struct {
 	Globals
 
-	List       ListCmd       `cmd:"" help:"List all resources"`
-	Get        GetCmd        `cmd:"" help:"Get a resource by ID"`
-	Search     SearchCmd     `cmd:"" help:"Search for resources"`
-	Version    VersionCmd    `cmd:"" help:"Show version information"`
-	Completion CompletionCmd `cmd:"" help:"Generate shell completion script"`
+	List        ListCmd        `cmd:"" help:"List all resources"`
+	Get         GetCmd         `cmd:"" help:"Get a resource by ID"`
+	Search      SearchCmd      `cmd:"" help:"Search for resources"`
+	Version     VersionCmd     `cmd:"" help:"Show version information"`
+	CheckUpdate UpdateCheckCmd `cmd:"" help:"Check for available updates"`
+	Completion  CompletionCmd  `cmd:"" help:"Generate shell completion script"`
 }
 
 // Globals contains global flags available to all commands
