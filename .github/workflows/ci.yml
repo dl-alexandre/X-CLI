@@ -25,15 +25,26 @@ jobs:
         test -f scripts/setup.sh || (echo "❌ scripts/setup.sh missing" && exit 1)
         echo "✅ All required template files present"
     
-    - name: Validate placeholder syntax
+    - name: Validate module path
       run: |
-        echo "Checking template placeholders..."
-        # Check for expected placeholders
-        grep -q "{{OWNER}}" go.mod || (echo "❌ Missing {{OWNER}} placeholder in go.mod" && exit 1)
-        grep -q "{{APPNAME}}" go.mod || (echo "❌ Missing {{APPNAME}} placeholder in go.mod" && exit 1)
-        grep -q "{{OWNER}}" README.md || (echo "❌ Missing {{OWNER}} placeholder in README.md" && exit 1)
-        grep -q "{{APPNAME}}" README.md || (echo "❌ Missing {{APPNAME}} placeholder in README.md" && exit 1)
-        echo "✅ Template placeholders found"
+        echo "Checking module path..."
+        # Check for valid module path (either template placeholders or actual GitHub path)
+        if grep -q "github.com/{{OWNER}}/{{APPNAME}}" go.mod; then
+          echo "✅ Template placeholders found (template repo mode)"
+        elif grep -q "github.com/dl-alexandre/cli-template" go.mod; then
+          echo "✅ Actual module path found (production mode)"
+        else
+          echo "❌ Invalid module path in go.mod"
+          exit 1
+        fi
+        
+        # Check README has proper references
+        if grep -q "dl-alexandre/cli-template" README.md || grep -q "{{OWNER}}/{{APPNAME}}" README.md; then
+          echo "✅ README has proper references"
+        else
+          echo "❌ README missing expected references"
+          exit 1
+        fi
     
     - name: Check files have content
       run: |
