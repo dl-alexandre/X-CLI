@@ -41,7 +41,7 @@ func Load(cfg *config.Config) (*Session, error) {
 	}
 
 	if strings.EqualFold(cfg.Auth.Source, "env") {
-		return nil, errors.New("auth.source is env but TWITTER_AUTH_TOKEN/TWITTER_CT0 are missing")
+		return nil, errors.New("auth.source is env but X_AUTH_TOKEN/X_CT0 are missing")
 	}
 
 	session, err := extractFromBrowser()
@@ -108,7 +108,7 @@ func extractFromBrowser() (*Session, error) {
 	}
 
 	if bestScore == 0 || len(bestCookies) == 0 {
-		return nil, errors.New("no usable X/Twitter browser cookies found")
+		return nil, errors.New("no usable X browser cookies found")
 	}
 
 	authToken := firstCookieValue(bestCookies, "auth_token")

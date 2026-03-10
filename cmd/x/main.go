@@ -25,7 +25,7 @@ func main() {
 	var c cli.CLI
 	ctx := kong.Parse(&c,
 		kong.Name("x"),
-		kong.Description("A terminal-first CLI for X/Twitter: timelines, search, profiles, and bookmarks without API keys"),
+		kong.Description("A terminal-first CLI for X: timelines, search, profiles, and bookmarks without API keys"),
 		kong.UsageOnError(),
 		kong.ConfigureHelp(kong.HelpOptions{
 			Compact: true,

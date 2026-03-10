@@ -1,0 +1,181 @@
+{
+  "mcpServers": {
+    "x-cli": {
+      "command": "x",
+      "args": [],
+      "env": {},
+      "tools": [
+        {
+          "name": "x_user_summary",
+          "description": "Generate an LLM-readable summary of a user's recent posts. Returns top hashtags, mentions, engagement metrics, and themes.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "screen_name": {
+                "type": "string",
+                "description": "X screen name without @ prefix"
+              },
+              "max": {
+                "type": "integer",
+                "description": "Maximum posts to analyze",
+                "default": 20
+              }
+            },
+            "required": ["screen_name"]
+          },
+          "command": "x",
+          "args": ["user-summary", "{screen_name}", "--max", "{max}", "-j"]
+        },
+        {
+          "name": "x_search",
+          "description": "Search posts on X. Returns posts matching the query.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "Search query"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["Top", "Latest", "Photos", "Videos"],
+                "default": "Top",
+                "description": "Search tab type"
+              },
+              "max": {
+                "type": "integer",
+                "description": "Maximum posts to fetch",
+                "default": 20
+              }
+            },
+            "required": ["query"]
+          },
+          "command": "x",
+          "args": ["search", "{query}", "--type", "{type}", "--max", "{max}", "-j"]
+        },
+        {
+          "name": "x_user_posts",
+          "description": "Fetch recent posts from a specific user.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "screen_name": {
+                "type": "string",
+                "description": "X screen name without @ prefix"
+              },
+              "max": {
+                "type": "integer",
+                "description": "Maximum posts to fetch",
+                "default": 20
+              }
+            },
+            "required": ["screen_name"]
+          },
+          "command": "x",
+          "args": ["user-posts", "{screen_name}", "--max", "{max}", "-j"]
+        },
+        {
+          "name": "x_tweet",
+          "description": "Fetch a specific post and its replies by ID or URL.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Post ID or full status URL"
+              },
+              "max_replies": {
+                "type": "integer",
+                "description": "Maximum replies to fetch",
+                "default": 20
+              }
+            },
+            "required": ["id"]
+          },
+          "command": "x",
+          "args": ["tweet", "{id}", "--max-replies", "{max_replies}", "-j"]
+        },
+        {
+          "name": "x_user_profile",
+          "description": "Fetch a user's profile information.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "screen_name": {
+                "type": "string",
+                "description": "X screen name without @ prefix"
+              }
+            },
+            "required": ["screen_name"]
+          },
+          "command": "x",
+          "args": ["user", "{screen_name}", "-j"]
+        },
+        {
+          "name": "x_feed",
+          "description": "Fetch the home timeline (For You or Following).",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["for-you", "following"],
+                "default": "for-you",
+                "description": "Feed type"
+              },
+              "max": {
+                "type": "integer",
+                "description": "Maximum posts to fetch",
+                "default": 20
+              }
+            }
+          },
+          "command": "x",
+          "args": ["feed", "--type", "{type}", "--max", "{max}", "-j"]
+        },
+        {
+          "name": "x_followers",
+          "description": "Fetch followers for a user.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "screen_name": {
+                "type": "string",
+                "description": "X screen name without @ prefix"
+              },
+              "max": {
+                "type": "integer",
+                "description": "Maximum users to fetch",
+                "default": 20
+              }
+            },
+            "required": ["screen_name"]
+          },
+          "command": "x",
+          "args": ["followers", "{screen_name}", "--max", "{max}", "-j"]
+        },
+        {
+          "name": "x_following",
+          "description": "Fetch accounts followed by a user.",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "screen_name": {
+                "type": "string",
+                "description": "X screen name without @ prefix"
+              },
+              "max": {
+                "type": "integer",
+                "description": "Maximum users to fetch",
+                "default": 20
+              }
+            },
+            "required": ["screen_name"]
+          },
+          "command": "x",
+          "args": ["following", "{screen_name}", "--max", "{max}", "-j"]
+        }
+      ]
+    }
+  }
+}

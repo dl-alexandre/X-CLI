@@ -20,25 +20,25 @@
 #### 2. Complete Read Operations
 ```bash
 x feed              # Home timeline (for-you/following)
-x favorites         # Bookmarked tweets
-x list <id>         # List tweets
+x favorites         # Bookmarked posts
+x list <id>         # List posts
 x user <handle>     # Profile lookup
-x user-posts        # User's tweets
-x likes <handle>    # Liked tweets
+x user-posts        # User's posts
+x likes <handle>    # Liked posts
 x followers         # Follower list
 x following         # Following list
 x search <query>    # Search with filters
-x tweet <id>        # Tweet detail + replies
+x tweet <id>        # Post detail + replies
 ```
 
 #### 3. Write Operations (Native Transport)
 ```bash
-x post "text"           # Create tweet
-x delete <id>           # Delete tweet
-x like <id>             # Like tweet
-x unlike <id>           # Unlike tweet
+x post "text"           # Create post
+x delete <id>           # Delete post
+x like <id>             # Like post
+x unlike <id>           # Unlike post
 x retweet <id>          # Retweet
-x unretweet <id>        # Undo retweet
+x unretweet <id>        # Undo repost
 x bookmark <id>         # Bookmark
 x unbookmark <id>       # Remove bookmark
 ```
@@ -159,8 +159,8 @@ browser:
 ### Performance
 | Operation | Before (Browser) | After (Native) | Improvement |
 |-----------|-----------------|----------------|-------------|
-| Post tweet | 3-5s | 200-500ms | **10x** |
-| Delete tweet | 3-5s | 200-500ms | **10x** |
+| Create post | 3-5s | 200-500ms | **10x** |
+| Delete post | 3-5s | 200-500ms | **10x** |
 | Timeline fetch | 1-2s | 300-500ms | **4x** |
 | Memory usage | 300MB+ | 50MB | **6x** |
 
@@ -225,7 +225,7 @@ browser:
 
 ### v0.2.0 (May 2024)
 - [ ] Real-time timeline streaming
-- [ ] Auto-like/auto-retweet rules
+- [ ] Auto-like/auto-repost rules
 - [ ] Video upload support
 
 ### v0.3.0 (June 2024)

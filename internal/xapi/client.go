@@ -25,6 +25,7 @@ import (
 	"github.com/dl-alexandre/X-CLI/internal/auth"
 	"github.com/dl-alexandre/X-CLI/internal/config"
 	"github.com/dl-alexandre/X-CLI/internal/model"
+	"github.com/dl-alexandre/X-CLI/internal/text"
 )
 
 const (
@@ -71,12 +72,17 @@ type Client struct {
 	authSession  *auth.Session
 	txProvider   TransactionIDProvider
 	traceWriter  *txIDTraceWriter
+	rateLimiter  *RateLimitHandler
+	oauthToken   *auth.OAuthToken
+	oauthStorage *auth.TokenStorage
+	oauthMu      sync.Mutex
 }
 
 type Options struct {
 	Config  *config.Config
 	Verbose bool
 	Debug   bool
+	Profile string
 }
 
 type NotImplementedError struct {
@@ -110,6 +116,14 @@ func NewClient(opts Options) *Client {
 		traceOps = opts.Config.Browser.TraceTxIDOps
 	}
 
+	profile := opts.Profile
+	if profile == "" {
+		profile = auth.DefaultProfile
+	}
+
+	oauthStorage := auth.NewTokenStorageWithProfile(profile)
+	oauthToken, _ := oauthStorage.Load()
+
 	return &Client{
 		config: opts.Config,
 		httpClient: &http.Client{
@@ -122,13 +136,16 @@ func NewClient(opts Options) *Client {
 				Proxy: http.ProxyFromEnvironment,
 			},
 		},
-		verbose:     opts.Verbose,
-		debug:       opts.Debug,
-		transport:   transport,
-		queryIDs:    map[string]string{},
-		authSession: session,
-		txProvider:  txProvider,
-		traceWriter: newTxIDTraceWriter(traceFile, traceMode, traceOps),
+		verbose:      opts.Verbose,
+		debug:        opts.Debug,
+		transport:    transport,
+		queryIDs:     map[string]string{},
+		authSession:  session,
+		txProvider:   txProvider,
+		traceWriter:  newTxIDTraceWriter(traceFile, traceMode, traceOps),
+		rateLimiter:  NewRateLimitHandler(opts.Config, opts.Verbose),
+		oauthToken:   oauthToken,
+		oauthStorage: oauthStorage,
 	}
 }
 
@@ -169,7 +186,7 @@ func (c *Client) Status(version string) model.ProjectStatus {
 		"search",
 		"like/unlike",
 		"bookmark/unbookmark",
-		"retweet/unretweet",
+		"repost/unrepost",
 		"post/delete",
 	}
 
@@ -193,6 +210,20 @@ func (c *Client) Doctor() model.DoctorReport {
 		authStatus = "ok"
 		authDetails = "browser=" + fallbackString(c.authSession.Browser, "unknown")
 	}
+
+	oauthStatus := "missing"
+	oauthDetails := "not authenticated"
+	if c.oauthToken != nil {
+		oauthStatus = "ok"
+		oauthDetails = auth.GetTokenStatus(c.oauthToken)
+		if c.oauthStorage != nil && c.oauthStorage.IsKeyringAvailable() {
+			oauthDetails += " (keychain)"
+		} else {
+			oauthDetails += " (file)"
+		}
+	}
+	checks = append(checks, model.DoctorCheck{Name: "oauth", Status: oauthStatus, Details: oauthDetails})
+
 	checks = append(checks, model.DoctorCheck{Name: "auth", Status: authStatus, Details: authDetails})
 
 	debugURL, err := c.remoteDebugWebSocketURL()
@@ -254,7 +285,50 @@ func (c *Client) Doctor() model.DoctorReport {
 	}
 }
 
+func (c *Client) ensureValidOAuthToken() error {
+	c.oauthMu.Lock()
+	defer c.oauthMu.Unlock()
+
+	if c.oauthToken == nil {
+		return nil
+	}
+
+	if !c.oauthToken.NeedsRefresh() {
+		return nil
+	}
+
+	if c.verbose {
+		fmt.Fprintln(os.Stderr, "Refreshing OAuth token...")
+	}
+
+	newToken, err := auth.RefreshOAuthToken(c.oauthToken.RefreshToken)
+	if err != nil {
+		if c.verbose {
+			fmt.Fprintf(os.Stderr, "Token refresh failed: %v\n", err)
+		}
+		return fmt.Errorf("refresh token: %w", err)
+	}
+
+	c.oauthToken = newToken
+
+	if c.oauthStorage != nil {
+		if err := c.oauthStorage.Save(newToken); err != nil {
+			if c.verbose {
+				fmt.Fprintf(os.Stderr, "Failed to save refreshed token: %v\n", err)
+			}
+		}
+	}
+
+	if c.verbose {
+		fmt.Fprintln(os.Stderr, "Token refreshed successfully.")
+	}
+
+	return nil
+}
+
 func (c *Client) Feed(feedType string, count int) (model.TimelineResult, error) {
+	_ = c.ensureValidOAuthToken()
+
 	if !strings.EqualFold(feedType, "following") {
 		return c.browserTimeline("https://x.com/home", count, nil, "feed")
 	}
@@ -514,10 +588,120 @@ func (c *Client) CreatePost(text string) (model.ActionResult, error) {
 
 	payloadBytes, _ := json.Marshal(mutation.Payload)
 	if mutation.Status == 200 {
-		return model.ActionResult{}, fmt.Errorf("post submitted but could not confirm tweet id from payload: %s", truncateForError(string(payloadBytes)))
+		return model.ActionResult{}, fmt.Errorf("post submitted but could not confirm post id from payload: %s", truncateForError(string(payloadBytes)))
 	}
 
 	return model.ActionResult{}, fmt.Errorf("post was not confirmed by X (status=%d payload=%s)", mutation.Status, truncateForError(string(payloadBytes)))
+}
+
+func (c *Client) CreateThread(textContent string) ([]model.ActionResult, error) {
+	chunks := text.PrepareThread(textContent)
+	if len(chunks) == 0 {
+		return nil, errors.New("no content to post")
+	}
+
+	results := make([]model.ActionResult, 0, len(chunks))
+	var lastTweetID string
+
+	for i, chunk := range chunks {
+		if i > 0 && c.rateLimiter != nil {
+			jitterDelay := c.rateLimiter.AddJitter(1500 * time.Millisecond)
+			time.Sleep(jitterDelay)
+		}
+
+		var result model.ActionResult
+		var err error
+
+		if lastTweetID == "" {
+			result, err = c.CreatePost(chunk.Text)
+		} else {
+			result, err = c.createReply(chunk.Text, lastTweetID)
+		}
+
+		if err != nil {
+			if len(results) > 0 {
+				return results, fmt.Errorf("thread failed at post %d/%d: %w", i+1, len(chunks), err)
+			}
+			return nil, fmt.Errorf("failed to post first part: %w", err)
+		}
+
+		if result.URL != "" {
+			lastTweetID = extractTweetIDFromURL(result.URL)
+		}
+
+		result.Message = fmt.Sprintf("thread %d/%d posted", i+1, len(chunks))
+		results = append(results, result)
+	}
+
+	return results, nil
+}
+
+func (c *Client) createReply(text string, replyToID string) (model.ActionResult, error) {
+	var profileURL string
+	mutation, err := c.runBrowserMutation("CreateTweet", func(ctx context.Context) error {
+		if err := chromedp.Navigate(tweetURL(replyToID)).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.WaitVisible(`[data-testid="tweetTextarea_0"]`, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.AttributeValue(`[data-testid="AppTabBar_Profile_Link"]`, "href", &profileURL, nil, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.SendKeys(`[data-testid="tweetTextarea_0"]`, text, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.Sleep(1200 * time.Millisecond).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.Click(`[data-testid="tweetButtonInline"]`, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		return chromedp.Sleep(3 * time.Second).Do(ctx)
+	})
+	if err != nil {
+		return model.ActionResult{}, err
+	}
+
+	body, ok := mutation.Payload.(map[string]any)
+	if !ok {
+		return model.ActionResult{}, errors.New("create reply returned an unexpected response")
+	}
+
+	tweetID := stringValue(deepGet(body, "data", "create_tweet", "tweet_results", "result", "rest_id"))
+	if tweetID == "" {
+		tweetID = stringValue(deepGet(body, "data", "create_tweet", "tweet_results", "result", "tweet", "rest_id"))
+	}
+	if tweetID == "" {
+		tweetID = stringValue(deepGet(body, "data", "create_tweet", "tweet_results", "result", "legacy", "id_str"))
+	}
+	if tweetID == "" {
+		tweetID = findTweetID(body)
+	}
+
+	if tweetID != "" {
+		return model.ActionResult{Action: "reply", Success: true, URL: tweetURL(tweetID), Target: replyToID, Message: "reply posted"}, nil
+	}
+
+	if profileURL != "" {
+		if createdURL, confirmErr := c.confirmPostedTweet("https://x.com"+profileURL, firstLine(text)); confirmErr == nil && createdURL != "" {
+			return model.ActionResult{Action: "reply", Success: true, URL: createdURL, Target: replyToID, Message: "reply posted"}, nil
+		}
+	}
+
+	return model.ActionResult{}, errors.New("reply was not confirmed by X")
+}
+
+func extractTweetIDFromURL(urlStr string) string {
+	parts := strings.Split(urlStr, "/status/")
+	if len(parts) < 2 {
+		return ""
+	}
+	id := parts[len(parts)-1]
+	if idx := strings.Index(id, "?"); idx > 0 {
+		id = id[:idx]
+	}
+	return id
 }
 
 func (c *Client) DeletePost(id string) (model.ActionResult, error) {
@@ -593,7 +777,7 @@ func (c *Client) RetweetPost(id string) (model.ActionResult, error) {
 	if err != nil {
 		return model.ActionResult{}, err
 	}
-	return model.ActionResult{Action: "retweet", Target: id, Success: true, Message: "post retweeted"}, nil
+	return model.ActionResult{Action: "retweet", Target: id, Success: true, Message: "post reposted"}, nil
 }
 
 func (c *Client) UnretweetPost(id string) (model.ActionResult, error) {
@@ -627,7 +811,7 @@ func (c *Client) UnretweetPost(id string) (model.ActionResult, error) {
 	if err != nil {
 		return model.ActionResult{}, err
 	}
-	return model.ActionResult{Action: "unretweet", Target: id, Success: true, Message: "retweet removed"}, nil
+	return model.ActionResult{Action: "unretweet", Target: id, Success: true, Message: "repost removed"}, nil
 }
 
 func (c *Client) BookmarkPost(id string) (model.ActionResult, error) {
@@ -768,7 +952,7 @@ func (c *Client) doRequest(method string, urlString string, body []byte, referer
 		"X-Twitter-Client-Language": "en",
 	}
 
-	return c.rawRequest(method, urlString, headers, body)
+	return c.doRequestWithRetry(method, urlString, headers, body)
 }
 
 func (c *Client) ensureGuestToken() (string, error) {
@@ -779,7 +963,7 @@ func (c *Client) ensureGuestToken() (string, error) {
 		return c.guestToken, nil
 	}
 
-	body, status, err := c.rawRequest(http.MethodPost, "https://api.twitter.com/1.1/guest/activate.json", map[string]string{
+	body, status, _, err := c.rawRequest(http.MethodPost, "https://api.twitter.com/1.1/guest/activate.json", map[string]string{
 		"Authorization": "Bearer " + bearerToken,
 		"User-Agent":    c.userAgent(),
 		"Accept":        "*/*",
@@ -816,7 +1000,7 @@ func (c *Client) resolveQueryID(operation string) (string, error) {
 }
 
 func (c *Client) scanQueryIDs() error {
-	homeHTML, _, err := c.rawRequest(http.MethodGet, "https://x.com", map[string]string{
+	homeHTML, _, _, err := c.rawRequest(http.MethodGet, "https://x.com", map[string]string{
 		"User-Agent":      c.userAgent(),
 		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
 		"Accept-Language": "en-US,en;q=0.9",
@@ -835,7 +1019,7 @@ func (c *Client) scanQueryIDs() error {
 	updated := false
 
 	for _, scriptURL := range scriptURLs {
-		body, status, reqErr := c.rawRequest(http.MethodGet, scriptURL, map[string]string{
+		body, status, _, reqErr := c.rawRequest(http.MethodGet, scriptURL, map[string]string{
 			"User-Agent": c.userAgent(),
 			"Referer":    "https://x.com/",
 			"Accept":     "*/*",
@@ -1262,7 +1446,7 @@ func truncateForError(text string) string {
 
 func (c *Client) fetchSyndicationTweet(id string) (model.Tweet, error) {
 	urlString := "https://cdn.syndication.twimg.com/tweet-result?token=x&id=" + url.QueryEscape(id)
-	body, _, err := c.rawRequest(http.MethodGet, urlString, map[string]string{
+	body, _, _, err := c.rawRequest(http.MethodGet, urlString, map[string]string{
 		"User-Agent": c.userAgent(),
 		"Referer":    "https://x.com/",
 		"Accept":     "application/json,text/plain,*/*",
@@ -2058,7 +2242,7 @@ func mapSearchFilter(product string) string {
 	}
 }
 
-func (c *Client) rawRequest(method string, urlString string, headers map[string]string, body []byte) ([]byte, int, error) {
+func (c *Client) rawRequest(method string, urlString string, headers map[string]string, body []byte) ([]byte, int, http.Header, error) {
 	var reqBody io.Reader
 	if body != nil {
 		reqBody = bytes.NewReader(body)
@@ -2066,7 +2250,7 @@ func (c *Client) rawRequest(method string, urlString string, headers map[string]
 
 	req, err := http.NewRequest(method, urlString, reqBody)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 	for key, value := range headers {
 		req.Header.Set(key, value)
@@ -2097,18 +2281,60 @@ func (c *Client) rawRequest(method string, urlString string, headers map[string]
 		}
 	}
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, nil, err
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, resp.StatusCode, err
+		return nil, resp.StatusCode, resp.Header, err
 	}
 	if resp.StatusCode >= 400 {
-		return responseBody, resp.StatusCode, fmt.Errorf("x api error %d: %s", resp.StatusCode, truncateForError(string(responseBody)))
+		return responseBody, resp.StatusCode, resp.Header, fmt.Errorf("x api error %d: %s", resp.StatusCode, truncateForError(string(responseBody)))
 	}
-	return responseBody, resp.StatusCode, nil
+	return responseBody, resp.StatusCode, resp.Header, nil
+}
+
+func (c *Client) doRequestWithRetry(method string, urlString string, headers map[string]string, body []byte) ([]byte, int, error) {
+	maxRetries := 3
+	if c.rateLimiter != nil {
+		maxRetries = c.rateLimiter.GetMaxRetries()
+	}
+
+	var lastErr error
+	var lastStatus int
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 && c.rateLimiter != nil {
+			delay := c.rateLimiter.AddJitter(c.rateLimiter.GetRequestDelay())
+			time.Sleep(delay)
+		}
+
+		respBody, status, respHeaders, err := c.rawRequest(method, urlString, headers, body)
+		if err != nil {
+			lastErr = err
+			lastStatus = status
+		}
+
+		if c.rateLimiter != nil {
+			c.rateLimiter.ParseRateLimitHeaders(respHeaders)
+		}
+
+		if status == 429 && c.rateLimiter != nil && attempt < maxRetries {
+			var rateLimitInfo *RateLimitInfo
+			if c.rateLimiter != nil {
+				rateLimitInfo = c.rateLimiter.LastRateLimit()
+			}
+
+			waitDuration := c.rateLimiter.GetWaitDuration(rateLimitInfo)
+			c.rateLimiter.ShowCountdown(waitDuration, "Rate limited.")
+			continue
+		}
+
+		return respBody, status, err
+	}
+
+	return nil, lastStatus, lastErr
 }
 
 func NormalizeScreenName(screenName string) string {

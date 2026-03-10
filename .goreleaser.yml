@@ -121,56 +121,90 @@ release:
     sha256sum -c checksums.txt
     ```
 
-# Homebrew tap configuration (uncomment and customize)
-# brews:
-#   - name: x
-#     repository:
-#       owner: dl-alexandre
-#       name: homebrew-tap
-#       token: "{{ .Env.GITHUB_TOKEN }}"
-#     commit_author:
-#       name: goreleaserbot
-#       email: goreleaser@carlosbecker.com
-#     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
-#     directory: Formula
-#     description: "A terminal-first CLI for X/Twitter: timelines, search, profiles, and bookmarks without API keys"
-#     homepage: "https://github.com/dl-alexandre/X-CLI"
-#     license: "MIT"
-#     test: |
-#       system "#{bin}/x", "version"
-#     install: |
-#       bin.install "x"
+# Homebrew tap configuration
+brews:
+  - name: x-cli
+    repository:
+      owner: dl-alexandre
+      name: homebrew-tap
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@dl-alexandre.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    directory: Formula
+    description: "Terminal-first CLI for X/Twitter with AI-friendly outputs"
+    homepage: "https://github.com/dl-alexandre/X-CLI"
+    license: "MIT"
+    test: |
+      system "#{bin}/x", "version"
+    install: |
+      bin.install "x"
+      bash_completion.install "completions/x.bash" => "x"
+      zsh_completion.install "completions/_x" => "_x"
+      fish_completion.install "completions/x.fish"
 
-# Scoop configuration for Windows (uncomment and customize)
-# scoops:
-#   - repository:
-#       owner: dl-alexandre
-#       name: scoop-bucket
-#       token: "{{ .Env.GITHUB_TOKEN }}"
-#     commit_author:
-#       name: goreleaserbot
-#       email: goreleaser@carlosbecker.com
-#     commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
-#     description: "A terminal-first CLI for X/Twitter: timelines, search, profiles, and bookmarks without API keys"
-#     homepage: "https://github.com/dl-alexandre/X-CLI"
-#     license: MIT
-#     persist:
-#       - "config.yaml"
+# Scoop configuration for Windows
+scoops:
+  - repository:
+      owner: dl-alexandre
+      name: scoop-bucket
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@dl-alexandre.com
+    commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
+    description: "Terminal-first CLI for X/Twitter with AI-friendly outputs"
+    homepage: "https://github.com/dl-alexandre/X-CLI"
+    license: MIT
+    persist:
+      - "config.yaml"
 
-# Docker configuration (optional - uncomment when ready)
-# dockers:
-#   - image_templates:
-#       - "ghcr.io/dl-alexandre/x:{{ .Tag }}"
-#       - "ghcr.io/dl-alexandre/x:v{{ .Major }}"
-#       - "ghcr.io/dl-alexandre/x:v{{ .Major }}.{{ .Minor }}"
-#       - "ghcr.io/dl-alexandre/x:latest"
-#     dockerfile: Dockerfile
-#     build_flag_templates:
-#       - "--pull"
-#       - "--label=org.opencontainers.image.created={{.Date}}"
-#       - "--label=org.opencontainers.image.title={{.ProjectName}}"
-#       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-#       - "--label=org.opencontainers.image.version={{.Version}}"
+# Docker configuration
+dockers:
+  - image_templates:
+      - "ghcr.io/dl-alexandre/x-cli:{{ .Tag }}"
+      - "ghcr.io/dl-alexandre/x-cli:v{{ .Major }}"
+      - "ghcr.io/dl-alexandre/x-cli:v{{ .Major }}.{{ .Minor }}"
+      - "ghcr.io/dl-alexandre/x-cli:latest"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+
+# Snap configuration
+snapcrafts:
+  - name: x-cli
+    summary: "Terminal-first CLI for X/Twitter"
+    description: |
+      A professional-grade, AI-friendly CLI tool for X/Twitter built in Go.
+      
+      Features:
+      - OAuth 2.0 PKCE authentication
+      - AI-friendly outputs (JSON, Markdown)
+      - Thread posting with smart splitting
+      - Media and video uploads
+      - Multi-account profile management
+      - Tweet scheduling and templates
+      - Mention monitoring
+      - Analytics dashboard
+    grade: stable
+    confinement: strict
+    license: MIT
+    base: core22
+    apps:
+      x:
+        plugs:
+          - network
+          - network-bind
+          - home
+          - desktop
+        environment:
+          XDG_CONFIG_HOME: $SNAP_USER_DATA
+          HOME: $SNAP_USER_DATA
 
 # Goreleaser Pro features (optional)
 # announce:

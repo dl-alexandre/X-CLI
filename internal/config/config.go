@@ -11,13 +11,14 @@ import (
 )
 
 type Config struct {
-	Output    OutputConfig    `mapstructure:"output"`
-	Fetch     FetchConfig     `mapstructure:"fetch"`
-	Filter    FilterConfig    `mapstructure:"filter"`
-	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
-	Auth      AuthConfig      `mapstructure:"auth"`
-	HTTP      HTTPConfig      `mapstructure:"http"`
-	Browser   BrowserConfig   `mapstructure:"browser"`
+	Output       OutputConfig       `mapstructure:"output"`
+	Fetch        FetchConfig        `mapstructure:"fetch"`
+	Filter       FilterConfig       `mapstructure:"filter"`
+	RateLimit    RateLimitConfig    `mapstructure:"rate_limit"`
+	Auth         AuthConfig         `mapstructure:"auth"`
+	HTTP         HTTPConfig         `mapstructure:"http"`
+	Browser      BrowserConfig      `mapstructure:"browser"`
+	URLShortener URLShortenerConfig `mapstructure:"url_shortener"`
 }
 
 type OutputConfig struct {
@@ -71,6 +72,13 @@ type BrowserConfig struct {
 	StaticSalt     string `mapstructure:"static_salt"`
 }
 
+type URLShortenerConfig struct {
+	Enabled      bool   `mapstructure:"enabled"`
+	Service      string `mapstructure:"service"`
+	CustomAPIURL string `mapstructure:"custom_api_url"`
+	Timeout      string `mapstructure:"timeout"`
+}
+
 type Flags struct {
 	ConfigFile    string
 	Format        string
@@ -116,6 +124,10 @@ func Load(flags Flags) (*Config, error) {
 	v.SetDefault("browser.trace_txid_file", "")
 	v.SetDefault("browser.trace_txid_mode", "writes")
 	v.SetDefault("browser.trace_txid_ops", "")
+	v.SetDefault("url_shortener.enabled", false)
+	v.SetDefault("url_shortener.service", "tinyurl")
+	v.SetDefault("url_shortener.custom_api_url", "")
+	v.SetDefault("url_shortener.timeout", "10s")
 
 	if flags.ConfigFile != "" {
 		v.SetConfigFile(flags.ConfigFile)

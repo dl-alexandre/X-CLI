@@ -2,7 +2,7 @@
 
 ## 🎯 Mission Accomplished
 
-We have successfully reverse-engineered and implemented the native transaction ID generator for X/Twitter, eliminating the need for browser automation on write operations.
+We have successfully reverse-engineered and implemented the native transaction ID generator for X, eliminating the need for browser automation on write operations.
 
 ## 📊 Implementation Summary
 
@@ -53,9 +53,9 @@ export X_BROWSER_TRACE_TXID_FILE=/tmp/txids.jsonl
 export X_BROWSER_TRACE_TXID_OPS=FavoriteTweet,UnfavoriteTweet
 
 # Perform actions to capture txids
-./x like <tweet-id>
+./x like <post-id>
 sleep 2
-./x unlike <tweet-id>
+./x unlike <post-id>
 
 # Extract the salt
 ./x harvest-txid /tmp/txids.jsonl

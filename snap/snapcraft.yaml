@@ -1,0 +1,71 @@
+name: x-cli
+version: '1.0.0'
+summary: Terminal-first CLI for X/Twitter
+description: |
+  A professional-grade, AI-friendly CLI tool for X/Twitter built in Go.
+  
+  Features:
+  - OAuth 2.0 PKCE authentication
+  - AI-friendly outputs (JSON, Markdown)
+  - Thread posting with smart splitting
+  - Media and video uploads
+  - Multi-account profile management
+  - Tweet scheduling and templates
+  - Mention monitoring
+  - Analytics dashboard
+  - MCP integration for AI agents
+
+grade: stable
+confinement: strict
+base: core22
+
+architectures:
+  - build-on: amd64
+  - build-on: arm64
+
+parts:
+  x-cli:
+    plugin: go
+    source: .
+    source-type: git
+    build-snaps:
+      - go
+    build-packages:
+      - git
+    override-build: |
+      go build -ldflags="-s -w" -o $SNAPCRAFT_PART_INSTALL/bin/x ./cmd/x
+    
+    # Stage packages for runtime dependencies
+    stage-packages:
+      - ca-certificates
+    
+    # Organize files
+    organize:
+      bin/x: bin/x
+
+apps:
+  x:
+    command: bin/x
+    plugs:
+      - network
+      - network-bind
+      - home
+      - desktop
+      - browser-support
+    
+    environment:
+      XDG_CONFIG_HOME: $SNAP_USER_DATA
+      HOME: $SNAP_USER_DATA
+
+plugs:
+  browser-support:
+    interface: browser-support
+    allow-sandbox: false
+
+slots:
+  x-cli:
+    interface: content
+    content: executable
+    source:
+      read:
+        - $SNAP/bin/x

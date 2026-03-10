@@ -155,3 +155,48 @@ changelog:
 	else \
 		echo "git-chglog not installed. Install: go install github.com/git-chglog/git-chglog/cmd/git-chglog@latest"; \
 	fi
+
+# Homebrew formula packaging
+homebrew-formula:
+	@echo "Homebrew formula available at: homebrew/x-cli.rb"
+	@echo "To use locally:"
+	@echo "  brew install --formula homebrew/x-cli.rb"
+
+# Snap package build
+snap:
+	snapcraft
+
+# Snap clean
+snap-clean:
+	snapcraft clean
+
+# Docker build
+docker-build:
+	docker build -t x-cli:$(VERSION) .
+
+# Docker test
+docker-test:
+	docker run --rm x-cli:$(VERSION) x --help
+
+# Distribution packages
+dist-packages: release
+	@echo "Creating distribution packages..."
+	@mkdir -p dist/packages
+	
+	# Create tarballs
+	cd dist && tar -czf packages/x-cli-$(VERSION)-linux-amd64.tar.gz x-linux-amd64
+	cd dist && tar -czf packages/x-cli-$(VERSION)-linux-arm64.tar.gz x-linux-arm64
+	cd dist && tar -czf packages/x-cli-$(VERSION)-darwin-amd64.tar.gz x-darwin-amd64
+	cd dist && tar -czf packages/x-cli-$(VERSION)-darwin-arm64.tar.gz x-darwin-arm64
+	cd dist && zip packages/x-cli-$(VERSION)-windows-amd64.zip x-windows-amd64.exe
+	
+	# Generate checksums
+	cd dist/packages && sha256sum *.tar.gz *.zip > checksums.txt
+	
+	@echo "Distribution packages created in dist/packages/"
+
+# Full release (build, test, package)
+full-release: check dist-packages
+	@echo "Full release complete!"
+	@echo "Packages available in: dist/packages/"
+	@echo "Checksums: dist/packages/checksums.txt"

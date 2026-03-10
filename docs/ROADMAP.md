@@ -6,14 +6,14 @@ Now that the native transport layer is complete, we can build features that were
 
 ## Phase 1: Batch Operations (High Priority)
 
-### Bulk Tweet Management
+### Bulk Post Management
 ```bash
-# Delete multiple tweets efficiently
-x bulk-delete --from-file tweets-to-delete.txt --confirm
+# Delete multiple posts efficiently
+x bulk-delete --from-file posts-to-delete.txt --confirm
 
 # Like/unlike entire conversation threads
-x thread-like <tweet-id>       # Like OP + all replies
-x thread-unlike <tweet-id>     # Unlike entire thread
+x thread-like <post-id>       # Like OP + all replies
+x thread-unlike <post-id>     # Unlike entire thread
 
 # Mass bookmark operations
 x bulk-bookmark --search "golang tips" --max 50
@@ -44,11 +44,11 @@ x stream-followers --user <handle> --report hourly
 
 ### Event-Driven Actions
 ```bash
-# Auto-like replies to your tweets
+# Auto-like replies to your posts
 x auto-like-replies --window 5m
 
-# Auto-retweet posts matching criteria
-x auto-retweet --search "#buildinpublic" --filter "min_likes:10"
+# Auto-repost posts matching criteria
+x auto-repost --search "#buildinpublic" --filter "min_likes:10"
 ```
 
 ## Phase 3: Media & Content (Medium Priority)
@@ -74,21 +74,21 @@ x export --timeline --since 2024-01-01 --format json
 x export-bookmarks --all --include-media
 
 # Archive entire conversations
-x export-thread <tweet-id> --recursive --format markdown
+x export-thread <post-id> --recursive --format markdown
 ```
 
 ## Phase 4: Analytics & Intelligence (Lower Priority)
 
 ### Performance Metrics
 ```bash
-# Tweet analytics
-x stats <tweet-id> --engagement --impressions
+# Post analytics
+x stats <post-id> --engagement --impressions
 
 # Profile analytics
 x profile-stats --user <handle> --period 30d
 
 # Compare engagement rates
-x compare-stats <tweet-id-1> <tweet-id-2>
+x compare-stats <post-id-1> <post-id-2>
 ```
 
 ### Follower Analysis
@@ -143,7 +143,7 @@ type BatchProcessor struct {
 type TimelinePoller struct {
     interval    time.Duration
     lastCheck   time.Time
-    checkFunc   func() ([]Tweet, error)
+    checkFunc   func() ([]Post, error)
 }
 ```
 
@@ -161,9 +161,9 @@ type MediaUploader struct {
 
 | Feature | Browser Time | Native Target | Speedup |
 |---------|-------------|---------------|---------|
-| Bulk delete 100 tweets | 5-8 minutes | 30-60 seconds | **10x** |
+| Bulk delete 100 posts | 5-8 minutes | 30-60 seconds | **10x** |
 | Stream mentions | N/A | Real-time | **∞x** |
-| Export 1000 tweets | 15-20 minutes | 2-3 minutes | **8x** |
+| Export 1000 posts | 15-20 minutes | 2-3 minutes | **8x** |
 | Media upload | 30-60s | 5-10s | **6x** |
 
 ## Implementation Priority

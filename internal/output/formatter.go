@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dl-alexandre/X-CLI/internal/model"
@@ -29,7 +31,7 @@ func (p *Printer) PrintTimeline(result model.TimelineResult) error {
 	case "json":
 		return p.printAny(result)
 	case "markdown":
-		fmt.Println("# Tweets")
+		fmt.Println("# Posts")
 		fmt.Println()
 		for _, tweet := range result.Tweets {
 			fmt.Printf("- @%s: %s\n", tweet.Author.ScreenName, tweet.Text)
@@ -79,7 +81,7 @@ func (p *Printer) PrintUserProfile(user model.UserProfile) error {
 		}
 		fmt.Printf("- Followers: %d\n", user.FollowersCount)
 		fmt.Printf("- Following: %d\n", user.FollowingCount)
-		fmt.Printf("- Tweets: %d\n", user.TweetsCount)
+		fmt.Printf("- Posts: %d\n", user.TweetsCount)
 		return nil
 	default:
 		tbl := table.New("Field", "Value").WithWriter(os.Stdout)
@@ -127,6 +129,118 @@ func (p *Printer) PrintUsers(users []model.UserProfile) error {
 		tbl.Print()
 		return nil
 	}
+}
+
+func (p *Printer) PrintUserSummary(user model.UserProfile, tweets []model.Tweet) error {
+	summary := extractUserSummary(user, tweets)
+	return p.printAny(summary)
+}
+
+type UserSummary struct {
+	User         model.UserProfile `json:"user"`
+	TweetCount   int               `json:"tweet_count"`
+	TopHashtags  []string          `json:"top_hashtags"`
+	TopMentions  []string          `json:"top_mentions"`
+	AvgLikes     float64           `json:"avg_likes"`
+	AvgRetweets  float64           `json:"avg_retweets"`
+	AvgReplies   float64           `json:"avg_replies"`
+	TopTopics    []string          `json:"top_topics"`
+	RecentThemes []string          `json:"recent_themes"`
+}
+
+func extractUserSummary(user model.UserProfile, tweets []model.Tweet) UserSummary {
+	summary := UserSummary{
+		User:       user,
+		TweetCount: len(tweets),
+	}
+
+	if len(tweets) == 0 {
+		return summary
+	}
+
+	hashtagCounts := make(map[string]int)
+	mentionCounts := make(map[string]int)
+	wordCounts := make(map[string]int)
+	totalLikes := 0
+	totalRetweets := 0
+	totalReplies := 0
+
+	for _, tweet := range tweets {
+		totalLikes += tweet.Metrics.Likes
+		totalRetweets += tweet.Metrics.Retweets
+		totalReplies += tweet.Metrics.Replies
+
+		words := strings.Fields(strings.ToLower(tweet.Text))
+		for _, word := range words {
+			if strings.HasPrefix(word, "#") && len(word) > 1 {
+				hashtagCounts[word]++
+			} else if strings.HasPrefix(word, "@") && len(word) > 1 {
+				mentionCounts[word]++
+			} else if len(word) > 4 {
+				wordCounts[word]++
+			}
+		}
+	}
+
+	summary.AvgLikes = float64(totalLikes) / float64(len(tweets))
+	summary.AvgRetweets = float64(totalRetweets) / float64(len(tweets))
+	summary.AvgReplies = float64(totalReplies) / float64(len(tweets))
+
+	summary.TopHashtags = topKeys(hashtagCounts, 5)
+	summary.TopMentions = topKeys(mentionCounts, 5)
+	summary.TopTopics = topKeys(wordCounts, 10)
+
+	if len(tweets) > 0 {
+		summary.RecentThemes = extractThemes(tweets[:min(5, len(tweets))])
+	}
+
+	return summary
+}
+
+func extractThemes(tweets []model.Tweet) []string {
+	themes := make(map[string]int)
+	keywords := []string{"ai", "tech", "code", "build", "ship", "launch", "product", "startup", "data", "cloud", "security", "api", "open", "source", "learn", "write", "read", "think", "share", "grow"}
+
+	for _, tweet := range tweets {
+		text := strings.ToLower(tweet.Text)
+		for _, keyword := range keywords {
+			if strings.Contains(text, keyword) {
+				themes[keyword]++
+			}
+		}
+	}
+
+	return topKeys(themes, 5)
+}
+
+func topKeys(m map[string]int, n int) []string {
+	type kv struct {
+		Key   string
+		Value int
+	}
+
+	var pairs []kv
+	for k, v := range m {
+		pairs = append(pairs, kv{k, v})
+	}
+
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Value > pairs[j].Value
+	})
+
+	result := make([]string, 0, n)
+	for i := 0; i < min(n, len(pairs)); i++ {
+		result = append(result, pairs[i].Key)
+	}
+
+	return result
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func (p *Printer) PrintActionResult(result model.ActionResult) error {
@@ -240,7 +354,7 @@ func (p *Printer) printAny(value any) error {
 
 func (p *Printer) printTweetsTable(tweets []model.Tweet) error {
 	if len(tweets) == 0 {
-		fmt.Println("No tweets found.")
+		fmt.Println("No posts found.")
 		return nil
 	}
 
@@ -393,4 +507,12 @@ func (p *Printer) PrintSaltComparisons(comparisons []model.SaltComparison) error
 
 		return nil
 	}
+}
+
+func (p *Printer) PrintMentions(result any) error {
+	return p.printAny(result)
+}
+
+func (p *Printer) PrintAny(value any) error {
+	return p.printAny(value)
 }

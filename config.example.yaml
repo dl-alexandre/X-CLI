@@ -11,10 +11,10 @@ filter:
   mode: topN
   top_n: 20
   min_score: 50
-  exclude_retweets: false
+  exclude_reposts: false
   weights:
     likes: 1.0
-    retweets: 3.0
+    reposts: 3.0
     replies: 2.0
     bookmarks: 5.0
     views_log: 0.5
