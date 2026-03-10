@@ -133,7 +133,7 @@ brews:
       email: bot@dl-alexandre.com
     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     directory: Formula
-    description: "Terminal-first CLI for X/Twitter with AI-friendly outputs"
+    description: "Terminal-first CLI for X with AI-friendly outputs"
     homepage: "https://github.com/dl-alexandre/X-CLI"
     license: "MIT"
     test: |
@@ -156,41 +156,41 @@ scoops:
       email: bot@dl-alexandre.com
     commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
     directory: Distributions/scoop/bucket
-    description: "Terminal-first CLI for X/Twitter with AI-friendly outputs"
+    description: "Terminal-first CLI for X with AI-friendly outputs"
     homepage: "https://github.com/dl-alexandre/X-CLI"
     license: MIT
     persist:
       - "config.yaml"
 
-# Docker configuration
-dockers:
-  - image_templates:
-      - "ghcr.io/dl-alexandre/x-cli:{{ .Tag }}"
-      - "ghcr.io/dl-alexandre/x-cli:v{{ .Major }}"
-      - "ghcr.io/dl-alexandre/x-cli:v{{ .Major }}.{{ .Minor }}"
-      - "ghcr.io/dl-alexandre/x-cli:latest"
-    dockerfile: Dockerfile
-    build_flag_templates:
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
+# Docker configuration - disabled (requires GHCR authentication setup)
+# dockers:
+#   - image_templates:
+#       - "ghcr.io/dl-alexandre/x-cli:{{ .Tag }}"
+#       - "ghcr.io/dl-alexandre/x-cli:v{{ .Major }}"
+#       - "ghcr.io/dl-alexandre/x-cli:v{{ .Major }}.{{ .Minor }}"
+#       - "ghcr.io/dl-alexandre/x-cli:latest"
+#     dockerfile: Dockerfile
+#     build_flag_templates:
+#       - "--pull"
+#       - "--label=org.opencontainers.image.created={{.Date}}"
+#       - "--label=org.opencontainers.image.title={{.ProjectName}}"
+#       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+#       - "--label=org.opencontainers.image.version={{.Version}}"
 
 # Snap configuration - disabled (requires snapcraft in CI)
 # snapcrafts:
 #   - name: x-cli
-#     summary: "Terminal-first CLI for X/Twitter"
+#     summary: "Terminal-first CLI for X"
 #     description: |
-#       A professional-grade, AI-friendly CLI tool for X/Twitter built in Go.
-#       
+#       A professional-grade, AI-friendly CLI tool for X built in Go.
+#
 #       Features:
 #       - OAuth 2.0 PKCE authentication
 #       - AI-friendly outputs (JSON, Markdown)
 #       - Thread posting with smart splitting
 #       - Media and video uploads
 #       - Multi-account profile management
-#       - Tweet scheduling and templates
+#       - Post scheduling and templates
 #       - Mention monitoring
 #       - Analytics dashboard
 #     grade: stable
