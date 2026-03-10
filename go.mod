@@ -3,11 +3,12 @@ module github.com/dl-alexandre/X-CLI
 go 1.24.0
 
 require (
-	github.com/alecthomas/kong v1.8.1
+	github.com/alecthomas/kong v1.14.0
 	github.com/browserutils/kooky v0.2.5
 	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d
 	github.com/chromedp/chromedp v0.14.2
 	github.com/mattn/go-isatty v0.0.20
+	github.com/refraction-networking/utls v1.8.2
 	github.com/rodaine/table v1.3.0
 	github.com/spf13/viper v1.19.0
 )
@@ -33,7 +34,6 @@ require (
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
-	github.com/refraction-networking/utls v1.8.2 // indirect
 	github.com/sagikazarmark/locafero v0.6.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
