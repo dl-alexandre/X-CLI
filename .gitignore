@@ -6,7 +6,7 @@ dist/
 *.so
 *.dylib
 # Binary name after setup (not the template dir)
-/{{APPNAME}}
+/x
 
 # Test files
 *.test

@@ -1,4 +1,4 @@
-# Contributing to {{APPNAME}}
+# Contributing to x
 
 Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to this project.
 
@@ -16,8 +16,8 @@ Thank you for your interest in contributing! This document provides guidelines a
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/{{REPO_NAME}}.git
-   cd {{REPO_NAME}}
+   git clone https://github.com/YOUR_USERNAME/X-CLI.git
+   cd X-CLI
    ```
 
 3. Install dependencies:
@@ -98,7 +98,7 @@ If any check fails, the commit will be blocked. Fix the issues and try again.
 
 ```
 .
-├── cmd/{{APPNAME}}/         # Entry point
+├── cmd/x/         # Entry point
 ├── internal/
 │   ├── cli/                 # CLI command definitions (Kong structs)
 │   ├── api/                 # HTTP client and API types

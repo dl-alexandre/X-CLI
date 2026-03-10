@@ -8,38 +8,34 @@ on:
     branches: [ main, master ]
 
 jobs:
-  validate-template:
-    name: Validate Template Structure
+  validate-project:
+    name: Validate Project Structure
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
     
     - name: Check required files exist
       run: |
-        echo "Checking template structure..."
-        test -f "cmd/{{APPNAME}}/main.go" || echo "⚠️  cmd/{{APPNAME}}/main.go (will be renamed by setup.sh)"
+        echo "Checking project structure..."
+        test -f "cmd/x/main.go" || (echo "❌ cmd/x/main.go missing" && exit 1)
         test -f go.mod || (echo "❌ go.mod missing" && exit 1)
         test -f Makefile || (echo "❌ Makefile missing" && exit 1)
         test -f README.md || (echo "❌ README.md missing" && exit 1)
         test -f .golangci.yml || (echo "❌ .golangci.yml missing" && exit 1)
-        test -f scripts/setup.sh || (echo "❌ scripts/setup.sh missing" && exit 1)
-        echo "✅ All required template files present"
+        test -f config.example.yaml || (echo "❌ config.example.yaml missing" && exit 1)
+        echo "✅ All required project files present"
     
     - name: Validate module path
       run: |
         echo "Checking module path..."
-        # Check for valid module path (either template placeholders or actual GitHub path)
-        if grep -q "github.com/{{OWNER}}/{{APPNAME}}" go.mod; then
-          echo "✅ Template placeholders found (template repo mode)"
-        elif grep -q "github.com/dl-alexandre/cli-template" go.mod; then
-          echo "✅ Actual module path found (production mode)"
+        if grep -q "github.com/dl-alexandre/X-CLI" go.mod; then
+          echo "✅ Module path is correct"
         else
           echo "❌ Invalid module path in go.mod"
           exit 1
         fi
         
-        # Check README has proper references
-        if grep -q "dl-alexandre/cli-template" README.md || grep -q "{{OWNER}}/{{APPNAME}}" README.md; then
+        if grep -q "X-CLI" README.md && grep -q "github.com/dl-alexandre/X-CLI" README.md; then
           echo "✅ README has proper references"
         else
           echo "❌ README missing expected references"
@@ -50,16 +46,9 @@ jobs:
       run: |
         echo "Checking file contents..."
         test -s go.mod || (echo "❌ go.mod is empty" && exit 1)
-        test -s "cmd/{{APPNAME}}/main.go" || (echo "❌ main.go is empty" && exit 1)
+        test -s "cmd/x/main.go" || (echo "❌ main.go is empty" && exit 1)
         test -s internal/cli/cli.go || (echo "❌ cli.go is empty" && exit 1)
         echo "✅ All required files have content"
-    
-    - name: Check scripts are executable
-      run: |
-        echo "Checking script permissions..."
-        test -x scripts/setup.sh || (echo "❌ setup.sh should be executable" && exit 1)
-        test -x .githooks/pre-commit || (echo "❌ pre-commit hook should be executable" && exit 1)
-        echo "✅ Scripts are executable"
 
   cross-platform:
     name: Cross-Platform Validation
@@ -70,21 +59,21 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     
-    - name: Check template files (Windows)
+    - name: Check project files (Windows)
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        Write-Host "Checking template structure on Windows..."
+        Write-Host "Checking project structure on Windows..."
         if (!(Test-Path "go.mod")) { throw "❌ go.mod missing" }
         if (!(Test-Path "Makefile")) { throw "❌ Makefile missing" }
         if (!(Test-Path "README.md")) { throw "❌ README.md missing" }
-        Write-Host "✅ All required template files present"
+        Write-Host "✅ All required project files present"
     
-    - name: Check template files (Unix)
+    - name: Check project files (Unix)
       if: runner.os != 'Windows'
       run: |
         echo "Checking template structure on ${{ runner.os }}..."
         test -f go.mod || (echo "❌ go.mod missing" && exit 1)
         test -f Makefile || (echo "❌ Makefile missing" && exit 1)
         test -f README.md || (echo "❌ README.md missing" && exit 1)
-        echo "✅ All required template files present on ${{ runner.os }}"
+        echo "✅ All required project files present on ${{ runner.os }}"

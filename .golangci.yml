@@ -57,7 +57,7 @@ linters-settings:
     min-complexity: 15
   
   goimports:
-    local-prefixes: github.com/{{OWNER}}/{{APPNAME}}
+    local-prefixes: github.com/dl-alexandre/X-CLI
   
   gosec:
     severity: medium

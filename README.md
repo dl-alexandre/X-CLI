@@ -1,228 +1,146 @@
-# {{APPNAME}}
+# X-CLI
 
-{{DESCRIPTION}}
+`x` is a terminal-first CLI for X/Twitter built in Go. This repo starts from your Go template and is now retargeted toward timelines, search, tweet detail, lists, profiles, likes, followers, and bookmarks.
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/dl-alexandre/cli-template)](https://goreportcard.com/report/github.com/dl-alexandre/cli-template)
-[![Go Reference](https://pkg.go.dev/badge/github.com/dl-alexandre/cli-template.svg)](https://pkg.go.dev/github.com/dl-alexandre/cli-template)
-[![Release](https://img.shields.io/github/v/release/dl-alexandre/cli-template)](https://github.com/dl-alexandre/cli-template/releases)
-[![License](https://img.shields.io/github/license/dl-alexandre/cli-template)](LICENSE)
-
-## Features
-
-- **Modern CLI Framework**: Built with [Kong](https://github.com/alecthomas/kong) for declarative, struct-based command definition
-- **Multiple Output Formats**: Support for table, JSON, and markdown output
-- **Configuration Management**: Flexible configuration via files, environment variables, and flags
-- **Caching Layer**: Built-in file-based caching with TTL support
-- **Cross-Platform**: Builds for Linux, macOS, and Windows (AMD64 and ARM64)
-- **Shell Completions**: Bash, Zsh, Fish, and PowerShell completion support
-- **Release Automation**: GoReleaser configuration for automated releases
-
-## Installation
-
-### Homebrew (macOS/Linux)
+Install from source:
 
 ```bash
-brew tap {{OWNER}}/{{APPNAME}}
-brew install {{APPNAME}}
+go install github.com/dl-alexandre/X-CLI/cmd/x@latest
 ```
 
-### Go Install
+## Current State
+
+- Project name: `X-CLI`
+- Binary name: `x`
+- Module path: `github.com/dl-alexandre/X-CLI`
+- Status: `feed`, `favorites`, `list`, `user`, `user-posts`, `likes`, `followers`, `following`, `tweet`, `search`, `post`, `delete`, `like`, `unlike`, `bookmark`, `unbookmark`, `retweet`, and `unretweet` are working against live X data with a Go-only implementation; `post` and `delete` are verified through the remote-debug browser path
+
+## Command Surface
 
 ```bash
-go install github.com/{{OWNER}}/{{APPNAME}}/cmd/{{APPNAME}}@latest
+x status
+x doctor
+x analyze-txid /tmp/x-txid-trace.jsonl
+x feed --type for-you --max 20
+x favorites --max 20
+x search "golang" --type Latest --max 20
+x tweet 1234567890
+x list 1234567890
+x user jack
+x user-posts jack --max 20
+x likes jack --max 20
+x followers jack --max 20
+x following jack --max 20
+x post "hello from x-cli"
+x delete 1234567890
+x like 1234567890
+x unlike 1234567890
+x retweet 1234567890
+x unretweet 1234567890
+x bookmark 1234567890
+x unbookmark 1234567890
+x version
 ```
 
-### Binary Download
+Right now `feed`, `favorites`, `list`, `user`, `user-posts`, `likes`, `followers`, `following`, `tweet`, and `search` are live. `status` is also functional. Browser cookie extraction and authenticated browser-backed commands now run in Go as well, so the current implementation no longer depends on Python subprocess bridges. All current write actions are working; `post` and `delete` are verified through a real Chrome remote-debug session.
 
-Download the appropriate binary for your platform from the [releases page](https://github.com/{{OWNER}}/{{REPO_NAME}}/releases).
+`x doctor` checks auth loading, remote-debug availability, the native uTLS transport, and the current native transaction-id provider status.
 
-## Quick Start
+`x analyze-txid <file>` summarizes a captured txid JSONL corpus so you can study encoded length, decoded byte length, same-operation bit deltas, and bit-level probabilities while reverse-engineering the native signer. Use `--operation CreateTweet` to isolate one mutation class and `--full-bits` to print the full 560-bit probability map.
 
-### Creating from Template
-
-1. Click the green **"Use this template"** button on GitHub, or clone and run:
-   ```bash
-   git clone https://github.com/{{OWNER}}/{{APPNAME}}.git my-cli
-   cd my-cli
-   ./scripts/setup.sh
-   ```
-
-2. Follow the setup prompts, then see **[SETUP_GUIDE.md](SETUP_GUIDE.md)** for:
-   - GitHub repository configuration
-   - Enabling automated releases
-   - First release checklist
-   - pkg.go.dev registration
-
-### Example Commands
-
-```bash
-# Show help
-{{APPNAME}} --help
-
-# List resources
-{{APPNAME}} list
-
-# Get a specific resource
-{{APPNAME}} get <id>
-
-# Search resources
-{{APPNAME}} search "query"
-
-# Show version
-{{APPNAME}} version
-```
+For focused mutation research, set `X_BROWSER_TRACE_TXID_FILE` and optionally `X_BROWSER_TRACE_TXID_OPS=CreateTweet,DeleteTweet,FavoriteTweet,UnfavoriteTweet` to build a filtered write-only corpus.
 
 ## Configuration
 
-Configuration can be provided via:
+Configuration is read from `~/.config/x/config.yaml` by default.
 
-1. **Config file**: `~/.config/{{APPNAME}}/config.yaml`
-2. **Environment variables**: `{{APPNAME}}_API_URL`, `{{APPNAME}}_TIMEOUT`, etc.
-3. **Command-line flags**: `--api-url`, `--timeout`, etc.
+Environment variables:
 
-### Example Config File
+- `X_FORMAT`
+- `X_CONFIG`
+- `X_VERBOSE`
+- `X_DEBUG`
+- `X_BROWSER_REMOTE_DEBUG_URL`
+- `X_BROWSER_TRACE_TXID_FILE`
+- `X_BROWSER_TRACE_TXID_OPS`
+- `TWITTER_AUTH_TOKEN`
+- `TWITTER_CT0`
+- `TWITTER_PROXY`
+
+Example config:
 
 ```yaml
-api:
-  url: "https://api.example.com"
-  timeout: 30
-  key: "your-api-key"
+output:
+  format: table
 
-cache:
-  enabled: true
-  dir: "~/.config/{{APPNAME}}/cache"
-  ttl: 60m
+fetch:
+  count: 50
+
+filter:
+  mode: topN
+  top_n: 20
+  min_score: 50
+  exclude_retweets: false
+  weights:
+    likes: 1.0
+    retweets: 3.0
+    replies: 2.0
+    bookmarks: 5.0
+    views_log: 0.5
+
+rate_limit:
+  request_delay: 2500ms
+  max_retries: 3
+  retry_base_delay: 5s
+  max_count: 200
+
+auth:
+  source: browser
+
+http:
+  graphql_base_url: https://x.com/i/api/graphql
+
+browser:
+  remote_debug_url: ""
+  trace_txid_mode: writes
+  trace_txid_ops: ""
 ```
 
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `{{APPNAME}}_API_URL` | API base URL | `https://api.example.com` |
-| `{{APPNAME}}_TIMEOUT` | Request timeout (seconds) | `30` |
-| `{{APPNAME}}_NO_CACHE` | Disable caching | `false` |
-| `{{APPNAME}}_VERBOSE` | Enable verbose output | `false` |
-| `{{APPNAME}}_FORMAT` | Default output format | `table` |
-
-## Development
-
-### Prerequisites
-
-- Go 1.24 or later
-- golangci-lint (for linting)
-- GoReleaser (for releases)
-
-### Building
+For harder write flows, you can point X-CLI at a real Chrome debug session instead of the temporary cloned profile:
 
 ```bash
-# Build for current platform
-make build
-
-# Build for all platforms
-make build-all
-
-# Development build
-make dev
+rm -rf /tmp/x-cli-remote-debug
+open -na "Google Chrome" --args --user-data-dir=/tmp/x-cli-remote-debug --remote-debugging-port=9222
+export X_BROWSER_REMOTE_DEBUG_URL=http://127.0.0.1:9222/json/version
 ```
 
-### Testing
-
-```bash
-# Run tests
-make test
-
-# Run tests with coverage
-make test-coverage
-
-# Run linter
-make lint
-
-# Run all checks
-make check
-```
-
-### Available Make Targets
-
-```
-make build          Build for current platform
-make build-all      Build for all platforms
-make test           Run tests
-make lint           Run linter
-make format         Format code
-make release        Build optimized release binary
-make clean          Clean build artifacts
-make install        Install locally
-make install-hooks  Install git hooks
-make help           Show help
-```
-
-## Shell Completions
-
-### Bash
-
-```bash
-{{APPNAME}} completion bash > /usr/local/etc/bash_completion.d/{{APPNAME}}
-```
-
-### Zsh
-
-```bash
-{{APPNAME}} completion zsh > "${fpath[1]}/_{{APPNAME}}"
-```
-
-### Fish
-
-```bash
-{{APPNAME}} completion fish > ~/.config/fish/completions/{{APPNAME}}.fish
-```
-
-### PowerShell
-
-```powershell
-{{APPNAME}} completion powershell > {{APPNAME}}.ps1
-# Source the file in your PowerShell profile
-```
+On macOS, Chrome may not expose the DevTools socket when launched against the default profile. Using a dedicated `--user-data-dir` works reliably; sign in to X in that debug window once, then X-CLI can attach to it. When that endpoint is available, X-CLI will attach to the remote-debug browser first and only fall back to the cloned profile when no debugger is running.
 
 ## Project Structure
 
-```
-.
-├── cmd/{{APPNAME}}/         # Entry point
-│   └── main.go
-├── internal/
-│   ├── cli/                 # CLI command definitions
-│   ├── api/                 # HTTP client
-│   ├── config/              # Configuration management
-│   ├── output/              # Output formatters
-│   └── cache/               # Caching layer
-├── .github/
-│   └── workflows/           # CI/CD workflows
-├── Makefile                 # Build automation
-├── .goreleaser.yml         # Release configuration
-├── .golangci.yml           # Linter configuration
-├── go.mod                  # Go module definition
-├── README.md               # This file
-└── LICENSE                 # MIT License
+```text
+cmd/x/                  entrypoint for the x binary
+internal/cli/           Kong command definitions
+internal/config/        config loading and defaults
+internal/model/         tweet and profile models
+internal/output/        table/json/markdown rendering
+internal/xapi/          X/Twitter client scaffold
 ```
 
-## Contributing
+## Development
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Run tests and linting (`make check`)
-4. Commit your changes (`git commit -m 'Add amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
+```bash
+make build
+make test
+make format
+./bin/x status
+./bin/x --help
+```
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and development process.
+## Next Implementation Steps
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [Kong](https://github.com/alecthomas/kong) - Command-line parser
-- [resty](https://github.com/go-resty/resty) - HTTP client
-- [Viper](https://github.com/spf13/viper) - Configuration management
-- [rodaine/table](https://github.com/rodaine/table) - Table formatting
+1. Replace the browser-backed authenticated paths with native authenticated API transport.
+2. Tighten auth caching and error handling.
+3. Add stronger integration tests around the browser-backed paths.
+4. Smooth out the remote-debug setup UX.
+5. Reduce the remaining browser automation dependence over time.

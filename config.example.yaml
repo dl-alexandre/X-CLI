@@ -1,22 +1,45 @@
-# Example configuration file for {{APPNAME}}
-# Copy this file to ~/.config/{{APPNAME}}/config.yaml and customize
+# Example configuration file for X-CLI.
+# Copy this file to ~/.config/x/config.yaml and customize.
 
-api:
-  # Base URL for the API
-  url: "https://api.example.com"
-  
-  # Request timeout in seconds
-  timeout: 30
-  
-  # API key (if required)
-  # key: "your-api-key-here"
+output:
+  format: table
 
-cache:
-  # Enable/disable caching
-  enabled: true
-  
-  # Cache directory (defaults to ~/.config/{{APPNAME}}/cache)
-  # dir: "/path/to/custom/cache"
-  
-  # Cache TTL (in minutes)
-  ttl: 60
+fetch:
+  count: 50
+
+filter:
+  mode: topN
+  top_n: 20
+  min_score: 50
+  exclude_retweets: false
+  weights:
+    likes: 1.0
+    retweets: 3.0
+    replies: 2.0
+    bookmarks: 5.0
+    views_log: 0.5
+
+rate_limit:
+  request_delay: 2500ms
+  max_retries: 3
+  retry_base_delay: 5s
+  max_count: 200
+
+auth:
+  source: browser
+  token: ""
+  ct0: ""
+
+http:
+  graphql_base_url: https://x.com/i/api/graphql
+  proxy: ""
+  user_agent: x/dev
+
+browser:
+  remote_debug_url: ""
+  trace_txid_mode: writes
+  # To use native transaction generation without browser automation:
+  # 1. Run: x harvest-txid /path/to/trace.jsonl to capture a real salt
+  # 2. Copy the 58-character hex salt here
+  # 3. The CLI will use native transport for all operations
+  # static_salt: "7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c"

@@ -7,212 +7,390 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dl-alexandre/cli-template/internal/api"
+	"github.com/dl-alexandre/X-CLI/internal/model"
 	"github.com/rodaine/table"
 )
 
-// Printer handles output formatting
 type Printer struct {
 	format   string
 	useColor bool
 }
 
-// NewPrinter creates a new output printer
 func NewPrinter(format string, useColor bool) *Printer {
-	return &Printer{
-		format:   format,
-		useColor: useColor,
-	}
+	return &Printer{format: format, useColor: useColor}
 }
 
-// PrintItems prints a list of items in the specified format
-func (p *Printer) PrintItems(items *api.ListResponse) error {
+func (p *Printer) PrintStatus(status model.ProjectStatus) error {
+	return p.printAny(status)
+}
+
+func (p *Printer) PrintTimeline(result model.TimelineResult) error {
 	switch p.format {
 	case "json":
-		return p.printJSON(items)
+		return p.printAny(result)
 	case "markdown":
-		return p.printMarkdown(items)
-	case "table":
-		return p.printTable(items)
+		fmt.Println("# Tweets")
+		fmt.Println()
+		for _, tweet := range result.Tweets {
+			fmt.Printf("- @%s: %s\n", tweet.Author.ScreenName, tweet.Text)
+		}
+		return nil
 	default:
-		return fmt.Errorf("unsupported format: %s", p.format)
+		return p.printTweetsTable(result.Tweets)
 	}
 }
 
-// PrintItem prints a single item in the specified format
-func (p *Printer) PrintItem(item *api.Item) error {
+func (p *Printer) PrintTweetThread(thread model.TweetThread) error {
 	switch p.format {
 	case "json":
-		return p.printJSON(item)
+		return p.printAny(thread)
 	case "markdown":
-		return p.printItemMarkdown(item)
-	case "table":
-		return p.printItemTable(item)
+		fmt.Printf("# @%s\n\n%s\n", thread.Tweet.Author.ScreenName, thread.Tweet.Text)
+		if len(thread.Replies) > 0 {
+			fmt.Println()
+			fmt.Println("## Replies")
+			for _, reply := range thread.Replies {
+				fmt.Printf("- @%s: %s\n", reply.Author.ScreenName, reply.Text)
+			}
+		}
+		return nil
 	default:
-		return fmt.Errorf("unsupported format: %s", p.format)
+		if err := p.printTweetsTable([]model.Tweet{thread.Tweet}); err != nil {
+			return err
+		}
+		if len(thread.Replies) > 0 {
+			fmt.Println()
+			fmt.Println("Replies")
+			return p.printTweetsTable(thread.Replies)
+		}
+		return nil
 	}
 }
 
-// printJSON outputs data as formatted JSON
-func (p *Printer) printJSON(data interface{}) error {
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(data)
+func (p *Printer) PrintUserProfile(user model.UserProfile) error {
+	switch p.format {
+	case "json":
+		return p.printAny(user)
+	case "markdown":
+		fmt.Printf("# %s (@%s)\n\n", user.Name, user.ScreenName)
+		if user.Bio != "" {
+			fmt.Println(user.Bio)
+			fmt.Println()
+		}
+		fmt.Printf("- Followers: %d\n", user.FollowersCount)
+		fmt.Printf("- Following: %d\n", user.FollowingCount)
+		fmt.Printf("- Tweets: %d\n", user.TweetsCount)
+		return nil
+	default:
+		tbl := table.New("Field", "Value").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		tbl.AddRow("Name", user.Name)
+		tbl.AddRow("Screen Name", "@"+user.ScreenName)
+		tbl.AddRow("Followers", strconv.Itoa(user.FollowersCount))
+		tbl.AddRow("Following", strconv.Itoa(user.FollowingCount))
+		tbl.AddRow("Tweets", strconv.Itoa(user.TweetsCount))
+		if user.Bio != "" {
+			tbl.AddRow("Bio", user.Bio)
+		}
+		if user.Location != "" {
+			tbl.AddRow("Location", user.Location)
+		}
+		if user.URL != "" {
+			tbl.AddRow("URL", user.URL)
+		}
+		tbl.Print()
+		return nil
+	}
 }
 
-// printTable outputs items as a formatted table
-func (p *Printer) printTable(items *api.ListResponse) error {
-	if len(items.Items) == 0 {
-		fmt.Println("No items found.")
+func (p *Printer) PrintUsers(users []model.UserProfile) error {
+	switch p.format {
+	case "json":
+		return p.printAny(users)
+	case "markdown":
+		fmt.Println("# Users")
+		fmt.Println()
+		for _, user := range users {
+			fmt.Printf("- @%s (%s)\n", user.ScreenName, user.Name)
+		}
+		return nil
+	default:
+		if len(users) == 0 {
+			fmt.Println("No users found.")
+			return nil
+		}
+		tbl := table.New("Screen Name", "Name", "Followers", "Following").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		for _, user := range users {
+			tbl.AddRow("@"+user.ScreenName, user.Name, user.FollowersCount, user.FollowingCount)
+		}
+		tbl.Print()
+		return nil
+	}
+}
+
+func (p *Printer) PrintActionResult(result model.ActionResult) error {
+	switch p.format {
+	case "json":
+		return p.printAny(result)
+	case "markdown":
+		status := "failed"
+		if result.Success {
+			status = "ok"
+		}
+		fmt.Printf("- %s: %s", result.Action, status)
+		if result.Target != "" {
+			fmt.Printf(" (%s)", result.Target)
+		}
+		if result.URL != "" {
+			fmt.Printf(" %s", result.URL)
+		}
+		if result.Message != "" {
+			fmt.Printf(" - %s", result.Message)
+		}
+		fmt.Println()
+		return nil
+	default:
+		status := "ok"
+		if !result.Success {
+			status = "failed"
+		}
+		tbl := table.New("Action", "Status", "Target", "Message").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		tbl.AddRow(result.Action, status, result.Target, fallbackValue(result.URL, result.Message))
+		tbl.Print()
+		return nil
+	}
+}
+
+func (p *Printer) PrintDoctor(report model.DoctorReport) error {
+	switch p.format {
+	case "json":
+		return p.printAny(report)
+	case "markdown":
+		fmt.Printf("# %s\n\n", report.Name)
+		for _, check := range report.Checks {
+			fmt.Printf("- %s: %s", check.Name, check.Status)
+			if check.Details != "" {
+				fmt.Printf(" - %s", check.Details)
+			}
+			fmt.Println()
+		}
+		return nil
+	default:
+		tbl := table.New("Check", "Status", "Details").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		for _, check := range report.Checks {
+			tbl.AddRow(check.Name, check.Status, check.Details)
+		}
+		tbl.Print()
+		return nil
+	}
+}
+
+func (p *Printer) PrintSalts(samples []model.SaltSample) error {
+	switch p.format {
+	case "json":
+		return p.printAny(samples)
+	case "markdown":
+		fmt.Println("# TXID Salt Samples")
+		fmt.Println()
+		for _, s := range samples {
+			ts := time.UnixMilli(s.TimestampMS).UTC().Format("15:04:05.000")
+			fmt.Printf("## %s @ %s\n\n", s.Operation, ts)
+			fmt.Printf("- Salt: `%s`\n", s.Salt)
+			if len(s.Salt) >= 16 {
+				prefix := s.Salt[:16]
+				suffix := s.Salt[len(s.Salt)-8:]
+				fmt.Printf("- Pattern: `%s...%s` (%d bytes)\n", prefix, suffix, len(s.Salt)/2)
+			}
+			fmt.Println()
+		}
+		return nil
+	default:
+		if len(samples) == 0 {
+			fmt.Println("No salt samples found.")
+			return nil
+		}
+		tbl := table.New("Operation", "Time", "Salt (hex)", "Pattern").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		for _, s := range samples {
+			ts := time.UnixMilli(s.TimestampMS).UTC().Format("15:04:05")
+			saltDisplay := s.Salt
+			if len(saltDisplay) > 32 {
+				saltDisplay = saltDisplay[:29] + "..."
+			}
+			pattern := ""
+			if len(s.Salt) >= 16 {
+				pattern = s.Salt[:8] + "..." + s.Salt[len(s.Salt)-8:]
+			}
+			tbl.AddRow(s.Operation, ts, saltDisplay, pattern)
+		}
+		tbl.Print()
+		fmt.Printf("\nTotal unique operation+salt combinations: %d\n", len(samples))
+		return nil
+	}
+}
+
+func (p *Printer) printAny(value any) error {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(value)
+}
+
+func (p *Printer) printTweetsTable(tweets []model.Tweet) error {
+	if len(tweets) == 0 {
+		fmt.Println("No tweets found.")
 		return nil
 	}
 
-	tbl := table.New("ID", "Name", "Description", "Created", "Updated").
-		WithWriter(os.Stdout)
+	tbl := table.New("ID", "Author", "Text", "Likes", "RTs", "Replies").WithWriter(os.Stdout)
+	p.styleHeader(tbl)
 
-	if p.useColor {
-		tbl.WithHeaderFormatter(func(format string, vals ...interface{}) string {
-			return fmt.Sprintf("\033[1m%s\033[0m", fmt.Sprintf(format, vals...))
-		})
-	}
-
-	for _, item := range items.Items {
+	for _, tweet := range tweets {
 		tbl.AddRow(
-			item.ID,
-			truncate(item.Name, 30),
-			truncate(item.Description, 40),
-			formatTime(item.CreatedAt),
-			formatTime(item.UpdatedAt),
+			tweet.ID,
+			"@"+tweet.Author.ScreenName,
+			truncate(tweet.Text, 72),
+			tweet.Metrics.Likes,
+			tweet.Metrics.Retweets,
+			tweet.Metrics.Replies,
 		)
 	}
 
 	tbl.Print()
-	fmt.Printf("\nShowing %d of %d items\n", len(items.Items), items.Total)
-
 	return nil
 }
 
-// printMarkdown outputs items as markdown
-func (p *Printer) printMarkdown(items *api.ListResponse) error {
-	if len(items.Items) == 0 {
-		fmt.Println("No items found.")
-		return nil
+func (p *Printer) styleHeader(tbl table.Table) {
+	if !p.useColor {
+		return
 	}
+	tbl.WithHeaderFormatter(func(format string, vals ...interface{}) string {
+		return fmt.Sprintf("\033[1m%s\033[0m", fmt.Sprintf(format, vals...))
+	})
+}
 
-	fmt.Println("# Items")
-	fmt.Println()
+func truncate(text string, maxLen int) string {
+	if len(text) <= maxLen {
+		return text
+	}
+	if maxLen <= 3 {
+		return text[:maxLen]
+	}
+	return text[:maxLen-3] + "..."
+}
 
-	for _, item := range items.Items {
-		fmt.Printf("## %s\n\n", item.Name)
-		fmt.Printf("**ID:** %s\n\n", item.ID)
+func fallbackValue(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
 
-		if item.Description != "" {
-			fmt.Printf("**Description:** %s\n\n", item.Description)
+func (p *Printer) PrintSaltComparisons(comparisons []model.SaltComparison) error {
+	switch p.format {
+	case "json":
+		return p.printAny(comparisons)
+	default:
+		if len(comparisons) == 0 {
+			fmt.Println("No comparisons to show.")
+			return nil
 		}
 
-		fmt.Printf("**Created:** %s\n\n", item.CreatedAt.Format(time.RFC3339))
-		fmt.Printf("**Updated:** %s\n\n", item.UpdatedAt.Format(time.RFC3339))
+		fmt.Println("Salt Comparison Results (Constant Test)")
+		fmt.Println("=========================================")
+		fmt.Println()
 
-		if len(item.Metadata.Tags) > 0 {
-			fmt.Println("**Tags:**")
-			for _, tag := range item.Metadata.Tags {
-				fmt.Printf("- %s\n", tag)
+		// Group by findings
+		var sameSalts []model.SaltComparison
+		var diffSalts []model.SaltComparison
+
+		for _, c := range comparisons {
+			if c.SaltMatch {
+				sameSalts = append(sameSalts, c)
+			} else {
+				diffSalts = append(diffSalts, c)
+			}
+		}
+
+		if len(sameSalts) > 0 {
+			fmt.Printf("✓ Same Salt Pairs: %d\n", len(sameSalts))
+			fmt.Println()
+			for _, c := range sameSalts {
+				opMarker := "↔"
+				if c.SameOp {
+					opMarker = "→"
+				}
+				fmt.Printf("  %s %s %s (gap: %ds)\n",
+					c.SampleA.Operation,
+					opMarker,
+					c.SampleB.Operation,
+					c.TimeGapSec)
 			}
 			fmt.Println()
 		}
-	}
 
-	fmt.Printf("---\nTotal: %d items\n", items.Total)
-
-	return nil
-}
-
-// printItemTable prints a single item as a table
-func (p *Printer) printItemTable(item *api.Item) error {
-	tbl := table.New("Property", "Value").WithWriter(os.Stdout)
-
-	if p.useColor {
-		tbl.WithHeaderFormatter(func(format string, vals ...interface{}) string {
-			return fmt.Sprintf("\033[1m%s\033[0m", fmt.Sprintf(format, vals...))
-		})
-	}
-
-	tbl.AddRow("ID", item.ID)
-	tbl.AddRow("Name", item.Name)
-	tbl.AddRow("Description", item.Description)
-	tbl.AddRow("Created", formatTime(item.CreatedAt))
-	tbl.AddRow("Updated", formatTime(item.UpdatedAt))
-
-	if len(item.Metadata.Tags) > 0 {
-		tbl.AddRow("Tags", fmt.Sprintf("%v", item.Metadata.Tags))
-	}
-
-	if len(item.Metadata.Attributes) > 0 {
-		for k, v := range item.Metadata.Attributes {
-			tbl.AddRow(k, v)
+		if len(diffSalts) > 0 {
+			fmt.Printf("✗ Different Salt Pairs: %d\n", len(diffSalts))
+			fmt.Println()
+			for _, c := range diffSalts {
+				opMarker := "↔"
+				if c.SameOp {
+					opMarker = "→"
+				}
+				fmt.Printf("  %s %s %s (gap: %ds)\n",
+					c.SampleA.Operation,
+					opMarker,
+					c.SampleB.Operation,
+					c.TimeGapSec)
+			}
+			fmt.Println()
 		}
-	}
 
-	tbl.Print()
+		// Analysis summary
+		totalPairs := len(comparisons)
+		sameOpPairs := 0
+		sameOpSameSalt := 0
 
-	return nil
-}
-
-// printItemMarkdown prints a single item as markdown
-func (p *Printer) printItemMarkdown(item *api.Item) error {
-	fmt.Printf("# %s\n\n", item.Name)
-	fmt.Printf("**ID:** %s\n\n", item.ID)
-
-	if item.Description != "" {
-		fmt.Printf("**Description:** %s\n\n", item.Description)
-	}
-
-	fmt.Printf("**Created:** %s\n\n", item.CreatedAt.Format(time.RFC3339))
-	fmt.Printf("**Updated:** %s\n\n", item.UpdatedAt.Format(time.RFC3339))
-
-	if len(item.Metadata.Tags) > 0 {
-		fmt.Println("**Tags:**")
-		for _, tag := range item.Metadata.Tags {
-			fmt.Printf("- %s\n", tag)
+		for _, c := range comparisons {
+			if c.SameOp {
+				sameOpPairs++
+				if c.SaltMatch {
+					sameOpSameSalt++
+				}
+			}
 		}
-		fmt.Println()
-	}
 
-	if len(item.Metadata.Attributes) > 0 {
-		fmt.Println("**Attributes:**")
-		for k, v := range item.Metadata.Attributes {
-			fmt.Printf("- %s: %s\n", k, v)
+		fmt.Println("Summary")
+		fmt.Println("-------")
+		fmt.Printf("Total pairs compared: %d\n", totalPairs)
+		fmt.Printf("Same operation pairs: %d\n", sameOpPairs)
+
+		if sameOpPairs > 0 {
+			ratio := float64(sameOpSameSalt) / float64(sameOpPairs) * 100
+			fmt.Printf("Same operation + same salt: %d (%.0f%%)\n", sameOpSameSalt, ratio)
+
+			if ratio > 80 {
+				fmt.Println()
+				fmt.Println("📊 VERDICT: Session Constant (Scenario A)")
+				fmt.Println("   The salt appears to be static across the session.")
+				fmt.Println("   → Use SetStaticSalt() for native transport.")
+			} else if ratio > 40 {
+				fmt.Println()
+				fmt.Println("📊 VERDICT: Time-Windowed (Scenario B)")
+				fmt.Println("   The salt rotates periodically.")
+				fmt.Println("   → Implement rotating salt generator.")
+			} else {
+				fmt.Println()
+				fmt.Println("📊 VERDICT: Per-Request Nonce (Scenario C)")
+				fmt.Println("   The salt changes with every request.")
+				fmt.Println("   → Requires full JS reverse-engineering.")
+			}
 		}
-		fmt.Println()
+
+		return nil
 	}
-
-	return nil
-}
-
-// truncate shortens a string to max length
-func truncate(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
-}
-
-// formatTime formats a time for display
-func formatTime(t time.Time) string {
-	return t.Format("2006-01-02 15:04")
-}
-
-// ValidateFormat checks if a format is supported
-func ValidateFormat(format string, allowed []string) error {
-	for _, f := range allowed {
-		if f == format {
-			return nil
-		}
-	}
-	return fmt.Errorf("invalid format '%s', must be one of: %v", format, allowed)
-}
-
-// ParseBool parses a boolean string
-func ParseBool(s string) (bool, error) {
-	return strconv.ParseBool(s)
 }

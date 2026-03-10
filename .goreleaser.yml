@@ -3,7 +3,7 @@
 
 version: 2
 
-project_name: {{APPNAME}}
+project_name: x
 
 before:
   hooks:
@@ -14,9 +14,9 @@ before:
     - go test ./...
 
 builds:
-  - id: {{APPNAME}}
-    main: ./cmd/{{APPNAME}}
-    binary: {{APPNAME}}
+  - id: x
+    main: ./cmd/x
+    binary: x
     env:
       - CGO_ENABLED=0
     goos:
@@ -41,7 +41,7 @@ builds:
       - -trimpath
 
 archives:
-  - id: {{APPNAME}}
+  - id: x
     name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
@@ -95,22 +95,21 @@ changelog:
 
 release:
   github:
-    owner: {{OWNER}}
-    name: {{REPO_NAME}}
+    owner: dl-alexandre
+    name: X-CLI
   draft: false
   prerelease: auto
   name_template: "v{{.Version}}"
   header: |
-    ## {{APPNAME}} v{{.Version}}
+    ## x v{{.Version}}
     
-    Full Changelog: https://github.com/{{OWNER}}/{{REPO_NAME}}/compare/{{.PreviousTag}}...v{{.Version}}
+    Full Changelog: https://github.com/dl-alexandre/X-CLI/compare/{{.PreviousTag}}...v{{.Version}}
   footer: |
     ## Installation
     
-    ### macOS/Linux (Homebrew)
+    ### Go Install
     ```bash
-    brew tap {{OWNER}}/{{APPNAME}}
-    brew install {{APPNAME}}
+    go install github.com/dl-alexandre/X-CLI/cmd/x@latest
     ```
     
     ### Binary Download
@@ -124,9 +123,9 @@ release:
 
 # Homebrew tap configuration (uncomment and customize)
 # brews:
-#   - name: {{APPNAME}}
+#   - name: x
 #     repository:
-#       owner: {{OWNER}}
+#       owner: dl-alexandre
 #       name: homebrew-tap
 #       token: "{{ .Env.GITHUB_TOKEN }}"
 #     commit_author:
@@ -134,26 +133,26 @@ release:
 #       email: goreleaser@carlosbecker.com
 #     commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
 #     directory: Formula
-#     description: "{{DESCRIPTION}}"
-#     homepage: "https://github.com/{{OWNER}}/{{REPO_NAME}}"
+#     description: "A terminal-first CLI for X/Twitter: timelines, search, profiles, and bookmarks without API keys"
+#     homepage: "https://github.com/dl-alexandre/X-CLI"
 #     license: "MIT"
 #     test: |
-#       system "#{bin}/{{APPNAME}}", "version"
+#       system "#{bin}/x", "version"
 #     install: |
-#       bin.install "{{APPNAME}}"
+#       bin.install "x"
 
 # Scoop configuration for Windows (uncomment and customize)
 # scoops:
 #   - repository:
-#       owner: {{OWNER}}
+#       owner: dl-alexandre
 #       name: scoop-bucket
 #       token: "{{ .Env.GITHUB_TOKEN }}"
 #     commit_author:
 #       name: goreleaserbot
 #       email: goreleaser@carlosbecker.com
 #     commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
-#     description: "{{DESCRIPTION}}"
-#     homepage: "https://github.com/{{OWNER}}/{{REPO_NAME}}"
+#     description: "A terminal-first CLI for X/Twitter: timelines, search, profiles, and bookmarks without API keys"
+#     homepage: "https://github.com/dl-alexandre/X-CLI"
 #     license: MIT
 #     persist:
 #       - "config.yaml"
@@ -161,10 +160,10 @@ release:
 # Docker configuration (optional - uncomment when ready)
 # dockers:
 #   - image_templates:
-#       - "ghcr.io/{{OWNER}}/{{APPNAME}}:{{ .Tag }}"
-#       - "ghcr.io/{{OWNER}}/{{APPNAME}}:v{{ .Major }}"
-#       - "ghcr.io/{{OWNER}}/{{APPNAME}}:v{{ .Major }}.{{ .Minor }}"
-#       - "ghcr.io/{{OWNER}}/{{APPNAME}}:latest"
+#       - "ghcr.io/dl-alexandre/x:{{ .Tag }}"
+#       - "ghcr.io/dl-alexandre/x:v{{ .Major }}"
+#       - "ghcr.io/dl-alexandre/x:v{{ .Major }}.{{ .Minor }}"
+#       - "ghcr.io/dl-alexandre/x:latest"
 #     dockerfile: Dockerfile
 #     build_flag_templates:
 #       - "--pull"
@@ -177,4 +176,4 @@ release:
 # announce:
 #   twitter:
 #     enabled: true
-#     message_template: "{{APPNAME}} {{.Tag}} is out! Check it out: https://github.com/{{OWNER}}/{{REPO_NAME}}/releases/{{.Tag}}"
+#     message_template: "x {{.Tag}} is out! Check it out: https://github.com/dl-alexandre/X-CLI/releases/{{.Tag}}"

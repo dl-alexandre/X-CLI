@@ -1,6 +1,6 @@
 .PHONY: build build-all build-linux build-darwin build-windows test test-integration lint release clean format install install-hooks setup help
 
-BINARY_NAME={{APPNAME}}
+BINARY_NAME=x
 VERSION=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')

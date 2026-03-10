@@ -29,5 +29,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Git hooks for pre-commit checks
 - Comprehensive documentation
 
-[Unreleased]: https://github.com/{{OWNER}}/{{REPO_NAME}}/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/{{OWNER}}/{{REPO_NAME}}/releases/tag/v1.0.0
+[Unreleased]: https://github.com/dl-alexandre/X-CLI/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/dl-alexandre/X-CLI/releases/tag/v1.0.0

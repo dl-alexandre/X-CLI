@@ -10,171 +10,177 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Config holds the complete application configuration
 type Config struct {
-	API   APIConfig   `mapstructure:"api"`
-	Cache CacheConfig `mapstructure:"cache"`
+	Output    OutputConfig    `mapstructure:"output"`
+	Fetch     FetchConfig     `mapstructure:"fetch"`
+	Filter    FilterConfig    `mapstructure:"filter"`
+	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
+	Auth      AuthConfig      `mapstructure:"auth"`
+	HTTP      HTTPConfig      `mapstructure:"http"`
+	Browser   BrowserConfig   `mapstructure:"browser"`
 }
 
-// APIConfig holds API-related configuration
-type APIConfig struct {
-	URL     string `mapstructure:"url"`
-	Timeout int    `mapstructure:"timeout"`
-	Key     string `mapstructure:"key"`
+type OutputConfig struct {
+	Format string `mapstructure:"format"`
 }
 
-// CacheConfig holds caching configuration
-type CacheConfig struct {
-	Enabled bool          `mapstructure:"enabled"`
-	Dir     string        `mapstructure:"dir"`
-	TTL     time.Duration `mapstructure:"ttl"`
+type FetchConfig struct {
+	Count int `mapstructure:"count"`
 }
 
-// Flags holds command-line flag values
+type FilterConfig struct {
+	Mode            string        `mapstructure:"mode"`
+	TopN            int           `mapstructure:"top_n"`
+	MinScore        float64       `mapstructure:"min_score"`
+	ExcludeRetweets bool          `mapstructure:"exclude_retweets"`
+	Weights         FilterWeights `mapstructure:"weights"`
+}
+
+type FilterWeights struct {
+	Likes     float64 `mapstructure:"likes"`
+	Retweets  float64 `mapstructure:"retweets"`
+	Replies   float64 `mapstructure:"replies"`
+	Bookmarks float64 `mapstructure:"bookmarks"`
+	ViewsLog  float64 `mapstructure:"views_log"`
+}
+
+type RateLimitConfig struct {
+	RequestDelay   time.Duration `mapstructure:"request_delay"`
+	MaxRetries     int           `mapstructure:"max_retries"`
+	RetryBaseDelay time.Duration `mapstructure:"retry_base_delay"`
+	MaxCount       int           `mapstructure:"max_count"`
+}
+
+type AuthConfig struct {
+	Source string `mapstructure:"source"`
+	Token  string `mapstructure:"token"`
+	CT0    string `mapstructure:"ct0"`
+}
+
+type HTTPConfig struct {
+	GraphQLBaseURL string `mapstructure:"graphql_base_url"`
+	Proxy          string `mapstructure:"proxy"`
+	UserAgent      string `mapstructure:"user_agent"`
+}
+
+type BrowserConfig struct {
+	RemoteDebugURL string `mapstructure:"remote_debug_url"`
+	TraceTxIDFile  string `mapstructure:"trace_txid_file"`
+	TraceTxIDMode  string `mapstructure:"trace_txid_mode"`
+	TraceTxIDOps   string `mapstructure:"trace_txid_ops"`
+	StaticSalt     string `mapstructure:"static_salt"`
+}
+
 type Flags struct {
-	ConfigFile string
-	APIURL     string
-	Timeout    int
-	NoCache    bool
-	CacheDir   string
-	CacheTTL   int
-	Verbose    bool
-	Debug      bool
-	Format     string
+	ConfigFile    string
+	Format        string
+	Verbose       bool
+	Debug         bool
+	AuthToken     string
+	CT0           string
+	Proxy         string
+	TraceTxIDFile string
+	TraceTxIDOps  string
 }
 
-// default values
 const (
-	DefaultAPIURL     = "https://api.example.com"
-	DefaultTimeout    = 30
-	DefaultCacheTTL   = 60 * time.Minute
 	DefaultConfigName = "config"
 	DefaultConfigType = "yaml"
+	DefaultFormat     = "table"
+	DefaultFetchCount = 20
+	DefaultMaxCount   = 200
 )
 
-// Load loads configuration from file and environment variables
 func Load(flags Flags) (*Config, error) {
 	v := viper.New()
 
-	// Set defaults
-	v.SetDefault("api.url", DefaultAPIURL)
-	v.SetDefault("api.timeout", DefaultTimeout)
-	v.SetDefault("cache.enabled", true)
-	v.SetDefault("cache.ttl", DefaultCacheTTL)
+	v.SetDefault("output.format", DefaultFormat)
+	v.SetDefault("fetch.count", DefaultFetchCount)
+	v.SetDefault("filter.mode", "topN")
+	v.SetDefault("filter.top_n", 20)
+	v.SetDefault("filter.min_score", 50)
+	v.SetDefault("filter.exclude_retweets", false)
+	v.SetDefault("filter.weights.likes", 1.0)
+	v.SetDefault("filter.weights.retweets", 3.0)
+	v.SetDefault("filter.weights.replies", 2.0)
+	v.SetDefault("filter.weights.bookmarks", 5.0)
+	v.SetDefault("filter.weights.views_log", 0.5)
+	v.SetDefault("rate_limit.request_delay", "2500ms")
+	v.SetDefault("rate_limit.max_retries", 3)
+	v.SetDefault("rate_limit.retry_base_delay", "5s")
+	v.SetDefault("rate_limit.max_count", DefaultMaxCount)
+	v.SetDefault("auth.source", "browser")
+	v.SetDefault("http.graphql_base_url", "https://x.com/i/api/graphql")
+	v.SetDefault("http.user_agent", "x/dev")
+	v.SetDefault("browser.remote_debug_url", "")
+	v.SetDefault("browser.trace_txid_file", "")
+	v.SetDefault("browser.trace_txid_mode", "writes")
+	v.SetDefault("browser.trace_txid_ops", "")
 
-	// Set config file if provided
 	if flags.ConfigFile != "" {
 		v.SetConfigFile(flags.ConfigFile)
 	} else {
-		// Look for config in standard locations
-		configDir := getConfigDir()
-		v.AddConfigPath(configDir)
+		v.AddConfigPath(getConfigDir())
 		v.SetConfigName(DefaultConfigName)
 		v.SetConfigType(DefaultConfigType)
 	}
 
-	// Read environment variables
-	v.SetEnvPrefix("{{APPNAME}}")
+	v.SetEnvPrefix("X")
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
-	// Read config file (optional)
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, fmt.Errorf("failed to read config file: %w", err)
+			return nil, fmt.Errorf("read config: %w", err)
 		}
-		// Config file not found; use defaults and flags
 	}
 
-	// Override with flags
-	if flags.APIURL != "" {
-		v.Set("api.url", flags.APIURL)
+	if flags.Format != "" {
+		v.Set("output.format", flags.Format)
 	}
-	if flags.Timeout != 0 {
-		v.Set("api.timeout", flags.Timeout)
+	if flags.AuthToken != "" {
+		v.Set("auth.token", flags.AuthToken)
 	}
-	if flags.NoCache {
-		v.Set("cache.enabled", false)
+	if flags.CT0 != "" {
+		v.Set("auth.ct0", flags.CT0)
 	}
-	if flags.CacheDir != "" {
-		v.Set("cache.dir", flags.CacheDir)
+	if flags.Proxy != "" {
+		v.Set("http.proxy", flags.Proxy)
 	}
-	if flags.CacheTTL != 0 {
-		v.Set("cache.ttl", time.Duration(flags.CacheTTL)*time.Minute)
+	if flags.TraceTxIDFile != "" {
+		v.Set("browser.trace_txid_file", flags.TraceTxIDFile)
+	}
+	if flags.TraceTxIDOps != "" {
+		v.Set("browser.trace_txid_ops", flags.TraceTxIDOps)
 	}
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
 
-	// Set default cache directory if not specified
-	if cfg.Cache.Dir == "" {
-		cfg.Cache.Dir = filepath.Join(getConfigDir(), "cache")
+	if cfg.Fetch.Count <= 0 {
+		cfg.Fetch.Count = DefaultFetchCount
 	}
-
-	// Ensure cache directory exists if caching is enabled
-	if cfg.Cache.Enabled {
-		if err := os.MkdirAll(cfg.Cache.Dir, 0755); err != nil {
-			return nil, fmt.Errorf("failed to create cache directory: %w", err)
-		}
+	if cfg.RateLimit.MaxCount <= 0 {
+		cfg.RateLimit.MaxCount = DefaultMaxCount
+	}
+	if cfg.Output.Format == "" {
+		cfg.Output.Format = DefaultFormat
 	}
 
 	return &cfg, nil
 }
 
-// getConfigDir returns the platform-specific config directory
 func getConfigDir() string {
-	// Check XDG_CONFIG_HOME first
-	if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
-		return filepath.Join(xdgConfig, "{{APPNAME}}")
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, "x")
 	}
 
-	// Use OS-specific config directory
 	home, err := os.UserHomeDir()
 	if err != nil {
-		home = "."
+		return "."
 	}
 
-	return filepath.Join(home, ".config", "{{APPNAME}}")
-}
-
-// Save saves the configuration to the default config file
-func Save(cfg *Config) error {
-	v := viper.New()
-
-	// Set values
-	v.Set("api", cfg.API)
-	v.Set("cache", cfg.Cache)
-
-	// Ensure config directory exists
-	configDir := getConfigDir()
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	// Write config file
-	configFile := filepath.Join(configDir, DefaultConfigName+"."+DefaultConfigType)
-	v.SetConfigFile(configFile)
-
-	if err := v.WriteConfig(); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-
-	return nil
-}
-
-// IsCacheEnabled returns whether caching is enabled
-func (c *Config) IsCacheEnabled() bool {
-	return c.Cache.Enabled
-}
-
-// GetCacheDir returns the cache directory path
-func (c *Config) GetCacheDir() string {
-	return c.Cache.Dir
-}
-
-// GetCacheTTL returns the cache TTL
-func (c *Config) GetCacheTTL() time.Duration {
-	return c.Cache.TTL
+	return filepath.Join(home, ".config", "x")
 }
