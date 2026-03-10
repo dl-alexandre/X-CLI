@@ -144,16 +144,18 @@ brews:
       zsh_completion.install "completions/_x" => "_x"
       fish_completion.install "completions/x.fish"
 
-# Scoop configuration for Windows
+# Scoop configuration for Windows - using CLI-Tools monorepo
 scoops:
   - repository:
       owner: dl-alexandre
-      name: scoop-bucket
+      name: CLI-Tools
       token: "{{ .Env.GITHUB_TOKEN }}"
+      branch: main
     commit_author:
       name: goreleaserbot
       email: bot@dl-alexandre.com
     commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
+    directory: Distributions/scoop/bucket
     description: "Terminal-first CLI for X/Twitter with AI-friendly outputs"
     homepage: "https://github.com/dl-alexandre/X-CLI"
     license: MIT
@@ -175,36 +177,36 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
 
-# Snap configuration
-snapcrafts:
-  - name: x-cli
-    summary: "Terminal-first CLI for X/Twitter"
-    description: |
-      A professional-grade, AI-friendly CLI tool for X/Twitter built in Go.
-      
-      Features:
-      - OAuth 2.0 PKCE authentication
-      - AI-friendly outputs (JSON, Markdown)
-      - Thread posting with smart splitting
-      - Media and video uploads
-      - Multi-account profile management
-      - Tweet scheduling and templates
-      - Mention monitoring
-      - Analytics dashboard
-    grade: stable
-    confinement: strict
-    license: MIT
-    base: core22
-    apps:
-      x:
-        plugs:
-          - network
-          - network-bind
-          - home
-          - desktop
-        environment:
-          XDG_CONFIG_HOME: $SNAP_USER_DATA
-          HOME: $SNAP_USER_DATA
+# Snap configuration - disabled (requires snapcraft in CI)
+# snapcrafts:
+#   - name: x-cli
+#     summary: "Terminal-first CLI for X/Twitter"
+#     description: |
+#       A professional-grade, AI-friendly CLI tool for X/Twitter built in Go.
+#       
+#       Features:
+#       - OAuth 2.0 PKCE authentication
+#       - AI-friendly outputs (JSON, Markdown)
+#       - Thread posting with smart splitting
+#       - Media and video uploads
+#       - Multi-account profile management
+#       - Tweet scheduling and templates
+#       - Mention monitoring
+#       - Analytics dashboard
+#     grade: stable
+#     confinement: strict
+#     license: MIT
+#     base: core22
+#     apps:
+#       x:
+#         plugs:
+#           - network
+#           - network-bind
+#           - home
+#           - desktop
+#         environment:
+#           XDG_CONFIG_HOME: $SNAP_USER_DATA
+#           HOME: $SNAP_USER_DATA
 
 # Goreleaser Pro features (optional)
 # announce:

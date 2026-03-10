@@ -16,50 +16,51 @@ import (
 	"github.com/dl-alexandre/X-CLI/internal/search"
 	"github.com/dl-alexandre/X-CLI/internal/template"
 	"github.com/dl-alexandre/X-CLI/internal/xapi"
+	kongcompletion "github.com/jotaen/kong-completion"
 	"github.com/mattn/go-isatty"
 )
 
 type CLI struct {
 	Globals
 
-	Status      StatusCmd      `cmd:"" help:"Show scaffold status and planned capabilities"`
-	Doctor      DoctorCmd      `cmd:"" help:"Check auth, browser, and native transport readiness"`
-	Login       LoginCmd       `cmd:"" help:"Authenticate with X using OAuth 2.0"`
-	Logout      LogoutCmd      `cmd:"" help:"Remove stored authentication credentials"`
-	Profiles    ProfilesCmd    `cmd:"" help:"List all configured profiles"`
-	AnalyzeTXID AnalyzeTXIDCmd `cmd:"" name:"analyze-txid" help:"Analyze a captured txid JSONL corpus"`
-	HarvestTXID HarvestTXIDCmd `cmd:"" name:"harvest-txid" help:"Extract salt samples from txid trace"`
-	CompareTXID CompareTXIDCmd `cmd:"" name:"compare-txid" help:"Compare salts across operations to detect patterns"`
-	Analytics   AnalyticsCmd   `cmd:"" help:"Analytics dashboard for engagement metrics"`
-	Feed        FeedCmd        `cmd:"" help:"Fetch the home timeline"`
-	Favorites   FavoritesCmd   `cmd:"" help:"Fetch bookmarked posts"`
-	Search      SearchCmd      `cmd:"" help:"Search posts"`
-	Tweet       TweetCmd       `cmd:"" help:"Show a post and replies"`
-	List        ListCmd        `cmd:"" name:"list" help:"Fetch posts from a list"`
-	User        UserCmd        `cmd:"" help:"Show a user profile"`
-	UserPosts   UserPostsCmd   `cmd:"" name:"user-posts" help:"Fetch posts from a user"`
-	UserSummary UserSummaryCmd `cmd:"" name:"user-summary" help:"Generate LLM-readable summary of a user's recent posts"`
-	Likes       LikesCmd       `cmd:"" help:"Fetch posts liked by a user"`
-	Followers   FollowersCmd   `cmd:"" help:"Fetch followers for a user"`
-	Following   FollowingCmd   `cmd:"" help:"Fetch accounts followed by a user"`
-	Mentions    MentionsCmd    `cmd:"" help:"Monitor mentions with optional filtering and notifications"`
-	Post        PostCmd        `cmd:"" help:"Create a new post"`
-	Draft       DraftCmd       `cmd:"" help:"Manage draft posts"`
-	Schedule    ScheduleCmd    `cmd:"" help:"Manage scheduled posts"`
-	Template    TemplateCmd    `cmd:"" help:"Manage post templates"`
-	Delete      DeleteCmd      `cmd:"" help:"Delete one of your posts"`
-	Like        LikeCmd        `cmd:"" help:"Like a post"`
-	Unlike      UnlikeCmd      `cmd:"" help:"Unlike a post"`
-	Retweet     RetweetCmd     `cmd:"" help:"Repost a post"`
-	Unretweet   UnretweetCmd   `cmd:"" help:"Undo a repost"`
-	Bookmark    BookmarkCmd    `cmd:"" help:"Bookmark a post"`
-	Unbookmark  UnbookmarkCmd  `cmd:"" help:"Remove a bookmark"`
-	Version     VersionCmd     `cmd:"" help:"Show version information"`
-	Completion  CompletionCmd  `cmd:"" help:"Generate shell completion guidance"`
+	Status      StatusCmd                 `cmd:"" help:"Show scaffold status and planned capabilities"`
+	Doctor      DoctorCmd                 `cmd:"" help:"Check auth, browser, and native transport readiness"`
+	Login       LoginCmd                  `cmd:"" help:"Authenticate with X using OAuth 2.0"`
+	Logout      LogoutCmd                 `cmd:"" help:"Remove stored authentication credentials"`
+	Profiles    ProfilesCmd               `cmd:"" help:"List all configured profiles"`
+	AnalyzeTXID AnalyzeTXIDCmd            `cmd:"" name:"analyze-txid" help:"Analyze a captured txid JSONL corpus"`
+	HarvestTXID HarvestTXIDCmd            `cmd:"" name:"harvest-txid" help:"Extract salt samples from txid trace"`
+	CompareTXID CompareTXIDCmd            `cmd:"" name:"compare-txid" help:"Compare salts across operations to detect patterns"`
+	Analytics   AnalyticsCmd              `cmd:"" help:"Analytics dashboard for engagement metrics"`
+	Feed        FeedCmd                   `cmd:"" help:"Fetch the home timeline"`
+	Favorites   FavoritesCmd              `cmd:"" help:"Fetch bookmarked posts"`
+	Search      SearchCmd                 `cmd:"" help:"Search posts"`
+	Tweet       TweetCmd                  `cmd:"" help:"Show a post and replies"`
+	List        ListCmd                   `cmd:"" name:"list" help:"Fetch posts from a list"`
+	User        UserCmd                   `cmd:"" help:"Show a user profile"`
+	UserPosts   UserPostsCmd              `cmd:"" name:"user-posts" help:"Fetch posts from a user"`
+	UserSummary UserSummaryCmd            `cmd:"" name:"user-summary" help:"Generate LLM-readable summary of a user's recent posts"`
+	Likes       LikesCmd                  `cmd:"" help:"Fetch posts liked by a user"`
+	Followers   FollowersCmd              `cmd:"" help:"Fetch followers for a user"`
+	Following   FollowingCmd              `cmd:"" help:"Fetch accounts followed by a user"`
+	Mentions    MentionsCmd               `cmd:"" help:"Monitor mentions with optional filtering and notifications"`
+	Post        PostCmd                   `cmd:"" help:"Create a new post"`
+	Draft       DraftCmd                  `cmd:"" help:"Manage draft posts"`
+	Schedule    ScheduleCmd               `cmd:"" help:"Manage scheduled posts"`
+	Template    TemplateCmd               `cmd:"" help:"Manage post templates"`
+	Delete      DeleteCmd                 `cmd:"" help:"Delete one of your posts"`
+	Like        LikeCmd                   `cmd:"" help:"Like a post"`
+	Unlike      UnlikeCmd                 `cmd:"" help:"Unlike a post"`
+	Retweet     RetweetCmd                `cmd:"" help:"Repost a post"`
+	Unretweet   UnretweetCmd              `cmd:"" help:"Undo a repost"`
+	Bookmark    BookmarkCmd               `cmd:"" help:"Bookmark a post"`
+	Unbookmark  UnbookmarkCmd             `cmd:"" help:"Remove a bookmark"`
+	Version     VersionCmd                `cmd:"" help:"Show version information"`
+	Completion  kongcompletion.Completion `cmd:"" help:"Generate shell completion scripts"`
 }
 
 type Globals struct {
-	ConfigFile    string `help:"Config file path" short:"c" env:"X_CONFIG"`
+	ConfigFile    string `help:"Config file path" env:"X_CONFIG"`
 	Format        string `help:"Output format" default:"table" enum:"table,json,markdown" env:"X_FORMAT"`
 	JSON          bool   `help:"Output as JSON (shorthand for --format json)" short:"j"`
 	Markdown      bool   `help:"Output as Markdown (shorthand for --format markdown)" short:"m"`
@@ -1172,15 +1173,5 @@ func (c *TemplateImportCmd) Run(globals *Globals) error {
 type VersionCmd struct{}
 
 func (c *VersionCmd) Run() error {
-	return nil
-}
-
-type CompletionCmd struct {
-	Shell string `arg:"" help:"Shell name" enum:"bash,zsh,fish,powershell"`
-}
-
-func (c *CompletionCmd) Run() error {
-	_, _ = fmt.Fprintln(os.Stdout, "Shell completions are not wired yet.")
-	_, _ = fmt.Fprintf(os.Stdout, "Use `x --help` for now while the generated completion command is being added for %s.\n", c.Shell)
 	return nil
 }

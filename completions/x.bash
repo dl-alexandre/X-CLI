@@ -1,0 +1,1 @@
+complete -o default -o bashdefault -C /Users/developer/Documents/GitHub/workspaces/CLI-Tools/Tools/x-cli/x x
