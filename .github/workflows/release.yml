@@ -44,3 +44,8 @@ jobs:
         args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Optional: Add HOMEBREW_TAP_TOKEN secret to auto-update homebrew formula
+        # Generate a PAT with 'repo' scope at: https://github.com/settings/tokens
+        HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        # Optional: Add SCOOP_BUCKET_TOKEN secret to auto-update scoop manifest  
+        SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}

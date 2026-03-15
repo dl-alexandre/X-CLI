@@ -122,12 +122,16 @@ release:
     ```
 
 # Homebrew tap configuration
+# Requires HOMEBREW_TAP_TOKEN secret with 'repo' scope
 brews:
   - name: x-cli
     repository:
       owner: dl-alexandre
       name: homebrew-tap
-      token: "{{ .Env.GITHUB_TOKEN }}"
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+      branch: master
+      pull_request:
+        enabled: false
     commit_author:
       name: goreleaserbot
       email: bot@dl-alexandre.com
@@ -136,6 +140,7 @@ brews:
     description: "Terminal-first CLI for X with AI-friendly outputs"
     homepage: "https://github.com/dl-alexandre/X-CLI"
     license: "MIT"
+    skip_upload: "{{ if index .Env \"HOMEBREW_TAP_TOKEN\" }}false{{ else }}true{{ end }}"
     test: |
       system "#{bin}/x", "version"
     install: |
@@ -144,21 +149,25 @@ brews:
       zsh_completion.install "completions/_x" => "_x"
       fish_completion.install "completions/x.fish"
 
-# Scoop configuration for Windows - using CLI-Tools monorepo
+# Scoop configuration for Windows
+# Requires SCOOP_BUCKET_TOKEN secret with 'repo' scope
 scoops:
   - repository:
       owner: dl-alexandre
-      name: CLI-Tools
-      token: "{{ .Env.GITHUB_TOKEN }}"
+      name: scoop-bucket
+      token: "{{ .Env.SCOOP_BUCKET_TOKEN }}"
       branch: main
+      pull_request:
+        enabled: false
     commit_author:
       name: goreleaserbot
       email: bot@dl-alexandre.com
     commit_msg_template: "Scoop update for {{ .ProjectName }} version {{ .Tag }}"
-    directory: Distributions/scoop/bucket
+    directory: bucket
     description: "Terminal-first CLI for X with AI-friendly outputs"
     homepage: "https://github.com/dl-alexandre/X-CLI"
     license: MIT
+    skip_upload: "{{ if index .Env \"SCOOP_BUCKET_TOKEN\" }}false{{ else }}true{{ end }}"
     persist:
       - "config.yaml"
 
