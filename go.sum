@@ -22,8 +22,8 @@ github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuy
 github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137/go.mod h1:OMCwj8VM1Kc9e19TLln2VL61YJF0x1XFtfdL4JdbSyE=
 github.com/andybalholm/brotli v1.0.6 h1:Yf9fFpf49Zrxb9NlQaluyE92/+X7UVHlhMNJN2sxfOI=
 github.com/andybalholm/brotli v1.0.6/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
-github.com/browserutils/kooky v0.2.5 h1:Bk6V92o37YiTvMEabfwuZ0//abi51oeirbmJRY5lbh4=
-github.com/browserutils/kooky v0.2.5/go.mod h1:PUfeVveveeNFb+sdiqbDmrSZFM7LLWR0qMxfvXX/a3g=
+github.com/browserutils/kooky v0.2.6 h1:jsGI/kCKrOoQutTCroRTDciJuikCG/xeZKlahzYxGEk=
+github.com/browserutils/kooky v0.2.6/go.mod h1:YRjmVPLqQqR84NdDqt61+QWfZOe2Cfi1fsqyh6Hhmm4=
 github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d h1:ZtA1sedVbEW7EW80Iz2GR3Ye6PwbJAJXjv7D74xG6HU=
 github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d/go.mod h1:NItd7aLkcfOA/dcMXvl8p1u+lQqioRMq/SqDp71Pb/k=
 github.com/chromedp/chromedp v0.14.2 h1:r3b/WtwM50RsBZHMUm9fsNhhzRStTHrKdr2zmwbZSzM=
