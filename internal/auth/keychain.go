@@ -38,9 +38,9 @@ func NewTokenStorageWithProfile(profile string) *TokenStorage {
 		profile = DefaultProfile
 	}
 
-	key := profileKeyringKey(profile)
-	_, err := keyring.Get(KeyringService, key)
-	useKeyring := err == nil || err != keyring.ErrNotFound
+	// Skip keychain check on initialization to avoid keychain prompts
+	// Only use keychain if explicitly requested
+	useKeyring := false
 
 	return &TokenStorage{
 		useKeyring: useKeyring,

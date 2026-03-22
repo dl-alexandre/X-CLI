@@ -98,3 +98,16 @@ type SaltComparison struct {
 	TimeGapSec int64      `json:"time_gap_sec"`
 	SameOp     bool       `json:"same_operation"`
 }
+
+type Article struct {
+	ID            string       `json:"id"`
+	Title         string       `json:"title"`
+	Author        Author       `json:"author"`
+	CreatedAt     string       `json:"created_at,omitempty"`
+	TextContent   string       `json:"text_content,omitempty"`
+	HTMLContent   string       `json:"html_content,omitempty"`
+	URL           string       `json:"url,omitempty"`
+	CoverImageURL string       `json:"cover_image_url,omitempty"`
+	Metrics       TweetMetrics `json:"metrics,omitempty"`
+	WordCount     int          `json:"word_count,omitempty"`
+}

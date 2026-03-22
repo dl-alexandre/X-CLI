@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,6 +37,7 @@ func Load(cfg *config.Config) (*Session, error) {
 		return nil, nil
 	}
 
+	// Try environment variables first
 	if session := loadFromEnv(cfg); session != nil {
 		return session, nil
 	}
@@ -44,20 +46,15 @@ func Load(cfg *config.Config) (*Session, error) {
 		return nil, errors.New("auth.source is env but X_AUTH_TOKEN/X_CT0 are missing")
 	}
 
-	session, err := extractFromBrowser()
-	if err == nil && session != nil {
-		_ = saveToCache(*session)
+	// Try file-based session (no keychain access)
+	if session, err := LoadSession(""); err == nil && session != nil {
 		return session, nil
 	}
 
-	if session, cacheErr := loadFromCache(); cacheErr == nil && session != nil {
-		return session, nil
-	}
+	// Skip browser cookie extraction (avoids keychain prompts)
+	// Users should use 'x login' instead
 
-	if err != nil {
-		return nil, err
-	}
-	return nil, errors.New("no browser or cached session available")
+	return nil, errors.New("not authenticated - run 'x login' to authenticate")
 }
 
 func loadFromEnv(cfg *config.Config) *Session {
@@ -290,4 +287,99 @@ func parseCookieString(raw string) []*http.Cookie {
 		})
 	}
 	return cookies
+}
+
+// SaveSession saves a browser session to the cache
+func SaveSession(profile string, session *Session) error {
+	if profile == "" {
+		profile = DefaultProfile
+	}
+
+	entry := cacheEntry{
+		SavedAt: time.Now().UTC().Format(time.RFC3339),
+		Session: *session,
+	}
+
+	body, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+
+	cachePath, err := sessionCacheFilePath(profile)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(cachePath), 0755); err != nil {
+		return err
+	}
+
+	return os.WriteFile(cachePath, body, 0600)
+}
+
+// LoadSession loads a browser session from the cache
+func LoadSession(profile string) (*Session, error) {
+	if profile == "" {
+		profile = DefaultProfile
+	}
+
+	cachePath, err := sessionCacheFilePath(profile)
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := os.ReadFile(cachePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var entry cacheEntry
+	if err := json.Unmarshal(body, &entry); err != nil {
+		return nil, err
+	}
+
+	savedAt, err := time.Parse(time.RFC3339, entry.SavedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if expired (7 days)
+	if time.Since(savedAt) > 7*24*time.Hour {
+		return nil, errors.New("session expired")
+	}
+
+	if entry.Session.AuthToken == "" || entry.Session.CT0 == "" {
+		return nil, errors.New("session incomplete")
+	}
+
+	entry.Session.Cookies = parseCookieString(entry.Session.CookieString)
+	return &entry.Session, nil
+}
+
+// DeleteSession removes a saved session
+func DeleteSession(profile string) error {
+	if profile == "" {
+		profile = DefaultProfile
+	}
+
+	cachePath, err := sessionCacheFilePath(profile)
+	if err != nil {
+		return err
+	}
+
+	return os.Remove(cachePath)
+}
+
+func sessionCacheFilePath(profile string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	filename := "session.json"
+	if profile != DefaultProfile {
+		filename = fmt.Sprintf("session-%s.json", profile)
+	}
+
+	return filepath.Join(home, ".config", "x-cli", filename), nil
 }

@@ -516,3 +516,46 @@ func (p *Printer) PrintMentions(result any) error {
 func (p *Printer) PrintAny(value any) error {
 	return p.printAny(value)
 }
+
+func (p *Printer) PrintArticle(article model.Article) error {
+	switch p.format {
+	case "json":
+		return p.printAny(article)
+	case "markdown":
+		fmt.Printf("# %s\n\n", article.Title)
+		fmt.Printf("**By** @%s (%s)\n", article.Author.ScreenName, article.Author.Name)
+		if article.CreatedAt != "" {
+			fmt.Printf("**Published** %s\n", article.CreatedAt)
+		}
+		fmt.Printf("**Words** %d\n", article.WordCount)
+		fmt.Println()
+		if article.TextContent != "" {
+			fmt.Println(article.TextContent)
+		}
+		fmt.Println()
+		fmt.Printf("*URL: %s*\n", article.URL)
+		return nil
+	default:
+		fmt.Println()
+		fmt.Printf("  %s\n", article.Title)
+		fmt.Println()
+		fmt.Printf("  By @%s (%s)\n", article.Author.ScreenName, article.Author.Name)
+		if article.CreatedAt != "" {
+			fmt.Printf("  Published: %s\n", article.CreatedAt)
+		}
+		fmt.Printf("  Words: %d\n", article.WordCount)
+		fmt.Println()
+		fmt.Println("  " + strings.Repeat("─", 60))
+		fmt.Println()
+		if article.TextContent != "" {
+			lines := strings.Split(article.TextContent, "\n")
+			for _, line := range lines {
+				fmt.Printf("  %s\n", line)
+			}
+		}
+		fmt.Println()
+		fmt.Printf("  URL: %s\n", article.URL)
+		fmt.Println()
+		return nil
+	}
+}

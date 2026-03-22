@@ -38,6 +38,7 @@ var fallbackQueryIDs = map[string]string{
 	"UserTweets":       "tBNuKtAJqe33sRX5V6Vlbg",
 	"SearchTimeline":   "qUm8YPFHJWjQ56E_dP4MDg",
 	"TweetDetail":      "vsCTCQrF8oqASUb-x2SBcg",
+	"ArticleById":      "Wfi_8DUEC6iP7A1mrwJYXQ",
 }
 
 var defaultFeatures = map[string]bool{
@@ -2346,4 +2347,54 @@ func NormalizeTweetID(value string) string {
 	trimmed = strings.TrimSuffix(trimmed, "/")
 	parts := strings.Split(trimmed, "/")
 	return parts[len(parts)-1]
+}
+
+func (c *Client) Article(id string) (model.Article, error) {
+	return c.browserArticle(id)
+}
+
+func (c *Client) browserArticle(id string) (model.Article, error) {
+	url := fmt.Sprintf("https://x.com/i/article/%s", id)
+
+	timelineResult, err := c.browserTimeline(url, 1, nil, "article")
+	if err != nil {
+		return model.Article{}, fmt.Errorf("fetch article: %w", err)
+	}
+
+	if len(timelineResult.Tweets) == 0 {
+		return model.Article{}, fmt.Errorf("article %s not found", id)
+	}
+
+	tweet := timelineResult.Tweets[0]
+
+	article := model.Article{
+		ID:          id,
+		URL:         url,
+		Title:       tweet.Text,
+		TextContent: tweet.Text,
+		Author:      tweet.Author,
+		CreatedAt:   tweet.CreatedAt,
+	}
+
+	article.WordCount = len(strings.Fields(article.TextContent))
+
+	return article, nil
+}
+
+func getString(m map[string]any, key string) string {
+	if val, ok := m[key]; ok {
+		if s, ok := val.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+func getBool(m map[string]any, key string) bool {
+	if val, ok := m[key]; ok {
+		if b, ok := val.(bool); ok {
+			return b
+		}
+	}
+	return false
 }

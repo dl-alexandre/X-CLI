@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -25,7 +26,8 @@ type CLI struct {
 
 	Status      StatusCmd                 `cmd:"" help:"Show scaffold status and planned capabilities"`
 	Doctor      DoctorCmd                 `cmd:"" help:"Check auth, browser, and native transport readiness"`
-	Login       LoginCmd                  `cmd:"" help:"Authenticate with X using OAuth 2.0"`
+	Login       LoginCmd                  `cmd:"" help:"Authenticate with X using browser"`
+	Refresh     RefreshCmd                `cmd:"" help:"Refresh authentication session"`
 	Logout      LogoutCmd                 `cmd:"" help:"Remove stored authentication credentials"`
 	Profiles    ProfilesCmd               `cmd:"" help:"List all configured profiles"`
 	AnalyzeTXID AnalyzeTXIDCmd            `cmd:"" name:"analyze-txid" help:"Analyze a captured txid JSONL corpus"`
@@ -55,6 +57,7 @@ type CLI struct {
 	Unretweet   UnretweetCmd              `cmd:"" help:"Undo a repost"`
 	Bookmark    BookmarkCmd               `cmd:"" help:"Bookmark a post"`
 	Unbookmark  UnbookmarkCmd             `cmd:"" help:"Remove a bookmark"`
+	Article     ArticleCmd                `cmd:"" help:"Publish a long-form article (requires X Premium)"`
 	Version     VersionCmd                `cmd:"" help:"Show version information"`
 	Completion  kongcompletion.Completion `cmd:"" help:"Generate shell completion scripts"`
 }
@@ -185,34 +188,64 @@ func (c *LoginCmd) Run(globals *Globals) error {
 		profile = auth.DefaultProfile
 	}
 
-	storage := auth.NewTokenStorageWithProfile(profile)
-
 	if !c.Force {
-		if token, err := storage.Load(); err == nil && token != nil && !token.IsExpired() {
+		// Check if already authenticated using file-based session
+		if session, err := auth.LoadSession(profile); err == nil && session != nil {
 			fmt.Printf("Already authenticated (profile: %s).\n", profile)
-			fmt.Printf("Token status: %s\n", auth.GetTokenStatus(token))
 			fmt.Println("Use --force to re-authenticate.")
 			return nil
 		}
 	}
 
-	fmt.Printf("Starting OAuth 2.0 authentication flow (profile: %s)...\n", profile)
-	fmt.Println()
-
-	flow := auth.NewOAuthFlow()
-	token, err := flow.Start()
+	// Use browser-based login
+	session, err := auth.BrowserLogin()
 	if err != nil {
-		return fmt.Errorf("authentication failed: %w", err)
+		return fmt.Errorf("browser login failed: %w", err)
 	}
 
-	if err := storage.Save(token); err != nil {
-		return fmt.Errorf("save token: %w", err)
+	// Save the session to file (not keychain)
+	if err := auth.SaveSession(profile, session); err != nil {
+		return fmt.Errorf("save session: %w", err)
 	}
 
-	fmt.Println("\n✓ Authentication successful!")
+	fmt.Println()
+	fmt.Println("✓ Authentication successful!")
 	fmt.Printf("Profile: %s\n", profile)
-	fmt.Printf("Token stored securely in %s\n", storageLocation(storage))
-	fmt.Printf("Token expires at: %s\n", token.ExpiresAt.Format("2006-01-02 15:04:05"))
+	fmt.Printf("Browser: %s\n", session.Browser)
+	fmt.Println()
+	fmt.Println("You can now use:")
+	fmt.Println("  x article read <id>")
+	fmt.Println("  x post \"Hello world\"")
+
+	return nil
+}
+
+type RefreshCmd struct {
+	Name string `help:"Profile name to refresh"`
+}
+
+func (c *RefreshCmd) Run(globals *Globals) error {
+	profile := c.Name
+	if profile == "" {
+		profile = auth.DefaultProfile
+	}
+
+	// Delete old session
+	auth.DeleteSession(profile)
+
+	// Re-login with browser
+	session, err := auth.BrowserLogin()
+	if err != nil {
+		return fmt.Errorf("browser refresh failed: %w", err)
+	}
+
+	if err := auth.SaveSession(profile, session); err != nil {
+		return fmt.Errorf("save session: %w", err)
+	}
+
+	fmt.Println()
+	fmt.Println("✓ Session refreshed successfully!")
+	fmt.Printf("Profile: %s\n", profile)
 
 	return nil
 }
@@ -1167,6 +1200,111 @@ func (c *TemplateImportCmd) Run(globals *Globals) error {
 	}
 
 	fmt.Printf("Template imported: %s\n", tmpl.Name)
+	return nil
+}
+
+type ArticleCmd struct {
+	Read    ArticleReadCmd    `cmd:"" help:"Read an article by ID or URL"`
+	Publish ArticlePublishCmd `cmd:"" name:"publish" help:"Publish a long-form article"`
+}
+
+type ArticleReadCmd struct {
+	ID  string `arg:"" help:"Article ID or full URL"`
+	Raw bool   `help:"Output raw HTML content"`
+}
+
+func (c *ArticleReadCmd) Run(globals *Globals) error {
+	if c.ID == "" {
+		return fmt.Errorf("article ID or URL is required")
+	}
+
+	id := c.ID
+	if strings.Contains(id, "/i/articles/") {
+		parts := strings.Split(id, "/i/articles/")
+		if len(parts) > 1 {
+			id = strings.Split(parts[1], "?")[0]
+			id = strings.Split(id, "#")[0]
+		}
+	}
+
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return fmt.Errorf("could not extract article ID from URL")
+	}
+
+	article, err := globals.Client.Article(id)
+	if err != nil {
+		return fmt.Errorf("failed to fetch article: %w", err)
+	}
+
+	if c.Raw && article.HTMLContent != "" {
+		fmt.Println(article.HTMLContent)
+		return nil
+	}
+
+	return globals.Printer("").PrintArticle(article)
+}
+
+type ArticlePublishCmd struct {
+	Markdown string `arg:"" help:"Path to Markdown file"`
+	Cover    string `help:"Cover image path"`
+	Title    string `help:"Override article title"`
+	Submit   bool   `help:"Publish the article (default: preview only)"`
+}
+
+func (c *ArticlePublishCmd) Run(globals *Globals) error {
+	if c.Markdown == "" {
+		return fmt.Errorf("markdown file path is required")
+	}
+
+	if _, err := os.Stat(c.Markdown); err != nil {
+		return fmt.Errorf("markdown file not found: %w", err)
+	}
+
+	skillDir := os.Getenv("BAOYU_POST_TO_X_SKILL_DIR")
+	if skillDir == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("cannot determine skill directory: %w", err)
+		}
+		skillDir = fmt.Sprintf("%s/.config/opencode/skills/baoyu-post-to-x", homeDir)
+	}
+
+	scriptPath := fmt.Sprintf("%s/scripts/x-article.ts", skillDir)
+	if _, err := os.Stat(scriptPath); err != nil {
+		return fmt.Errorf("article script not found at %s: %w", scriptPath, err)
+	}
+
+	args := []string{"-y", "bun", scriptPath, c.Markdown}
+
+	if c.Cover != "" {
+		args = append(args, "--cover", c.Cover)
+	}
+
+	if c.Title != "" {
+		args = append(args, "--title", c.Title)
+	}
+
+	if c.Submit {
+		args = append(args, "--submit")
+	}
+
+	fmt.Printf("Publishing article from %s...\n", c.Markdown)
+	if c.Submit {
+		fmt.Println("Mode: PUBLISH")
+	} else {
+		fmt.Println("Mode: PREVIEW (add --submit to publish)")
+	}
+	fmt.Println()
+
+	cmd := exec.Command("npx", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to publish article: %w", err)
+	}
+
 	return nil
 }
 
