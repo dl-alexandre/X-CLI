@@ -10,7 +10,7 @@ require (
 	github.com/jotaen/kong-completion v0.0.12
 	github.com/mattn/go-isatty v0.0.20
 	github.com/refraction-networking/utls v1.8.2
-	github.com/rodaine/table v1.3.0
+	github.com/rodaine/table v1.3.1
 	github.com/spf13/viper v1.19.0
 	github.com/zalando/go-keyring v0.2.8
 )
