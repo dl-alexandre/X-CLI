@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/alecthomas/kong v1.14.0
-	github.com/browserutils/kooky v0.2.5
+	github.com/browserutils/kooky v0.2.9
 	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d
 	github.com/chromedp/chromedp v0.14.2
 	github.com/jotaen/kong-completion v0.0.12
@@ -16,13 +16,10 @@ require (
 )
 
 require (
-	github.com/Velocidex/json v0.0.0-20220224052537-92f3c0326e5a // indirect
-	github.com/Velocidex/ordereddict v0.0.0-20250821063524-02dc06e46238 // indirect
-	github.com/Velocidex/yaml/v2 v2.2.8 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
+	github.com/browserutils/ese v0.0.0-20260314233042-37b6a03a93ce // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/danieljoos/wincred v1.2.3 // indirect
-	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-json-experiment/json v0.0.0-20250725192818-e39067aee2d2 // indirect
 	github.com/go-sqlite/sqlite3 v0.0.0-20180313105335-53dd8e640ee7 // indirect
@@ -39,6 +36,7 @@ require (
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
+	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/posener/complete v1.2.3 // indirect
 	github.com/riywo/loginshell v0.0.0-20200815045211-7d26008be1ab // indirect
 	github.com/sagikazarmark/locafero v0.6.0 // indirect
@@ -56,5 +54,4 @@ require (
 	golang.org/x/text v0.34.0 // indirect
 	gopkg.in/ini.v1 v1.67.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	www.velocidex.com/golang/go-ese v0.2.0 // indirect
 )
