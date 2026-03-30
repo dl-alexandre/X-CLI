@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kong v1.14.0
 	github.com/browserutils/kooky v0.2.9
 	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d
-	github.com/chromedp/chromedp v0.14.2
+	github.com/chromedp/chromedp v0.16.1
 	github.com/jotaen/kong-completion v0.0.12
 	github.com/mattn/go-isatty v0.0.20
 	github.com/refraction-networking/utls v1.8.2
