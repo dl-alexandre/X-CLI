@@ -32,9 +32,9 @@ builds:
         goarch: arm
     ldflags:
       - -s -w
-      - -X main.version={{.Version}}
-      - -X main.gitCommit={{.Commit}}
-      - -X main.buildTime={{.Date}}
+      - -X github.com/dl-alexandre/cli-tools/version.Version={{.Version}}
+      - -X github.com/dl-alexandre/cli-tools/version.GitCommit={{.Commit}}
+      - -X github.com/dl-alexandre/cli-tools/version.BuildTime={{.Date}}
     flags:
       - -trimpath
 
