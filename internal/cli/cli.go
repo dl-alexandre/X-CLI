@@ -42,6 +42,8 @@ type CLI struct {
 	Tweet       TweetCmd                  `cmd:"" help:"Show a post and replies"`
 	DM          DMCmd                     `cmd:"" name:"dm" help:"Browse direct message inbox and conversations"`
 	Communities CommunitiesCmd            `cmd:"" name:"communities" help:"Show community metadata and posts"`
+	Spaces      SpacesCmd                 `cmd:"" name:"spaces" help:"Show space metadata"`
+	Trends      TrendsCmd                 `cmd:"" name:"trends" help:"Show current trending topics"`
 	List        ListCmd                   `cmd:"" name:"list" help:"Fetch posts from a list"`
 	Lists       ListsCmd                  `cmd:"" name:"lists" help:"Show list metadata, members, and followers"`
 	User        UserCmd                   `cmd:"" help:"Show a user profile"`
@@ -625,6 +627,34 @@ func (c *CommunitiesPostsCmd) Run(globals *Globals) error {
 		return err
 	}
 	return globals.Printer("").PrintTimeline(result)
+}
+
+type SpacesCmd struct {
+	Show SpacesShowCmd `cmd:"" help:"Show space metadata"`
+}
+
+type SpacesShowCmd struct {
+	SpaceID string `arg:"" help:"X space ID or full space URL"`
+}
+
+func (c *SpacesShowCmd) Run(globals *Globals) error {
+	space, err := globals.Client.SpaceDetails(c.SpaceID)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintSpace(space)
+}
+
+type TrendsCmd struct {
+	Max int `help:"Maximum trends to fetch" default:"20"`
+}
+
+func (c *TrendsCmd) Run(globals *Globals) error {
+	trends, err := globals.Client.Trends(c.Max)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintTrends(trends)
 }
 
 type ListCmd struct {

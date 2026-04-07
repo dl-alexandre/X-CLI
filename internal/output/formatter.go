@@ -191,6 +191,78 @@ func (p *Printer) PrintCommunity(community model.Community) error {
 	}
 }
 
+func (p *Printer) PrintSpace(space model.Space) error {
+	switch p.format {
+	case "json":
+		return p.printAny(space)
+	case "markdown":
+		fmt.Printf("# %s\n\n", space.Title)
+		fmt.Printf("- ID: %s\n", space.ID)
+		if space.Host != "" {
+			fmt.Printf("- Host: %s\n", space.Host)
+		}
+		if space.State != "" {
+			fmt.Printf("- State: %s\n", space.State)
+		}
+		if space.ScheduledAt != "" {
+			fmt.Printf("- Scheduled: %s\n", space.ScheduledAt)
+		}
+		if space.URL != "" {
+			fmt.Printf("- URL: %s\n", space.URL)
+		}
+		return nil
+	default:
+		tbl := table.New("Field", "Value").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		tbl.AddRow("Title", space.Title)
+		tbl.AddRow("ID", space.ID)
+		if space.Host != "" {
+			tbl.AddRow("Host", space.Host)
+		}
+		if space.State != "" {
+			tbl.AddRow("State", space.State)
+		}
+		if space.ScheduledAt != "" {
+			tbl.AddRow("Scheduled", space.ScheduledAt)
+		}
+		if space.URL != "" {
+			tbl.AddRow("URL", space.URL)
+		}
+		tbl.Print()
+		return nil
+	}
+}
+
+func (p *Printer) PrintTrends(trends []model.Trend) error {
+	switch p.format {
+	case "json":
+		return p.printAny(trends)
+	case "markdown":
+		fmt.Println("# Trends")
+		fmt.Println()
+		for _, trend := range trends {
+			fmt.Printf("- %s", trend.Name)
+			if trend.Posts != "" {
+				fmt.Printf(" (%s)", trend.Posts)
+			}
+			fmt.Println()
+		}
+		return nil
+	default:
+		if len(trends) == 0 {
+			fmt.Println("No trends found.")
+			return nil
+		}
+		tbl := table.New("Trend", "Category", "Posts").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		for _, trend := range trends {
+			tbl.AddRow(trend.Name, trend.Category, trend.Posts)
+		}
+		tbl.Print()
+		return nil
+	}
+}
+
 func (p *Printer) PrintDMInbox(inbox model.DMInbox) error {
 	switch p.format {
 	case "json":
