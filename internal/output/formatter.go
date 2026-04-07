@@ -105,6 +105,158 @@ func (p *Printer) PrintUserProfile(user model.UserProfile) error {
 	}
 }
 
+func (p *Printer) PrintList(list model.List) error {
+	switch p.format {
+	case "json":
+		return p.printAny(list)
+	case "markdown":
+		fmt.Printf("# %s\n\n", list.Name)
+		if list.Description != "" {
+			fmt.Println(list.Description)
+			fmt.Println()
+		}
+		fmt.Printf("- ID: %s\n", list.ID)
+		if list.MembersCount > 0 {
+			fmt.Printf("- Members: %d\n", list.MembersCount)
+		}
+		if list.FollowersCount > 0 {
+			fmt.Printf("- Followers: %d\n", list.FollowersCount)
+		}
+		if list.URL != "" {
+			fmt.Printf("- URL: %s\n", list.URL)
+		}
+		return nil
+	default:
+		tbl := table.New("Field", "Value").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		tbl.AddRow("Name", list.Name)
+		tbl.AddRow("ID", list.ID)
+		if list.Description != "" {
+			tbl.AddRow("Description", list.Description)
+		}
+		if list.MembersCount > 0 {
+			tbl.AddRow("Members", strconv.Itoa(list.MembersCount))
+		}
+		if list.FollowersCount > 0 {
+			tbl.AddRow("Followers", strconv.Itoa(list.FollowersCount))
+		}
+		if list.URL != "" {
+			tbl.AddRow("URL", list.URL)
+		}
+		tbl.Print()
+		return nil
+	}
+}
+
+func (p *Printer) PrintCommunity(community model.Community) error {
+	switch p.format {
+	case "json":
+		return p.printAny(community)
+	case "markdown":
+		fmt.Printf("# %s\n\n", community.Name)
+		if community.Description != "" {
+			fmt.Println(community.Description)
+			fmt.Println()
+		}
+		fmt.Printf("- ID: %s\n", community.ID)
+		if community.MembersCount > 0 {
+			fmt.Printf("- Members: %d\n", community.MembersCount)
+		}
+		if community.RulesCount > 0 {
+			fmt.Printf("- Rules: %d\n", community.RulesCount)
+		}
+		if community.URL != "" {
+			fmt.Printf("- URL: %s\n", community.URL)
+		}
+		return nil
+	default:
+		tbl := table.New("Field", "Value").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		tbl.AddRow("Name", community.Name)
+		tbl.AddRow("ID", community.ID)
+		if community.Description != "" {
+			tbl.AddRow("Description", community.Description)
+		}
+		if community.MembersCount > 0 {
+			tbl.AddRow("Members", strconv.Itoa(community.MembersCount))
+		}
+		if community.RulesCount > 0 {
+			tbl.AddRow("Rules", strconv.Itoa(community.RulesCount))
+		}
+		if community.URL != "" {
+			tbl.AddRow("URL", community.URL)
+		}
+		tbl.Print()
+		return nil
+	}
+}
+
+func (p *Printer) PrintDMInbox(inbox model.DMInbox) error {
+	switch p.format {
+	case "json":
+		return p.printAny(inbox)
+	case "markdown":
+		fmt.Println("# Direct Messages")
+		fmt.Println()
+		for _, convo := range inbox.Conversations {
+			line := convo.Title
+			if line == "" {
+				line = convo.ID
+			}
+			fmt.Printf("- %s", line)
+			if convo.Preview != "" {
+				fmt.Printf(": %s", convo.Preview)
+			}
+			fmt.Println()
+		}
+		return nil
+	default:
+		if len(inbox.Conversations) == 0 {
+			fmt.Println("No direct message conversations found.")
+			return nil
+		}
+		tbl := table.New("ID", "Title", "Preview", "Updated").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		for _, convo := range inbox.Conversations {
+			tbl.AddRow(convo.ID, fallbackValue(convo.Title, convo.Participant), truncate(convo.Preview, 48), convo.UpdatedAt)
+		}
+		tbl.Print()
+		return nil
+	}
+}
+
+func (p *Printer) PrintDMThread(thread model.DMThread) error {
+	switch p.format {
+	case "json":
+		return p.printAny(thread)
+	case "markdown":
+		title := fallbackValue(thread.Conversation.Title, thread.Conversation.ID)
+		fmt.Printf("# %s\n\n", title)
+		for _, msg := range thread.Messages {
+			prefix := fallbackValue(msg.Sender, ternaryDMLabel(msg.Outgoing, "You", "Unknown"))
+			fmt.Printf("- %s: %s", prefix, msg.Text)
+			if msg.CreatedAt != "" {
+				fmt.Printf(" (%s)", msg.CreatedAt)
+			}
+			fmt.Println()
+		}
+		return nil
+	default:
+		if len(thread.Messages) == 0 {
+			fmt.Println("No direct messages found.")
+			return nil
+		}
+		tbl := table.New("Sender", "Text", "Time").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		for _, msg := range thread.Messages {
+			sender := fallbackValue(msg.Sender, ternaryDMLabel(msg.Outgoing, "You", "Unknown"))
+			tbl.AddRow(sender, truncate(msg.Text, 72), msg.CreatedAt)
+		}
+		tbl.Print()
+		return nil
+	}
+}
+
 func (p *Printer) PrintUsers(users []model.UserProfile) error {
 	switch p.format {
 	case "json":
@@ -402,6 +554,13 @@ func fallbackValue(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func ternaryDMLabel(condition bool, whenTrue string, whenFalse string) string {
+	if condition {
+		return whenTrue
+	}
+	return whenFalse
 }
 
 func (p *Printer) PrintSaltComparisons(comparisons []model.SaltComparison) error {

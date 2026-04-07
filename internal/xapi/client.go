@@ -430,10 +430,6 @@ func (c *Client) Tweet(id string, count int) (model.TweetThread, error) {
 	return model.TweetThread{Tweet: tweets[0], Replies: tweets[1:]}, nil
 }
 
-func (c *Client) List(listID string, count int) (model.TimelineResult, error) {
-	return c.browserTimeline("https://x.com/i/lists/"+url.PathEscape(listID), count, nil, "list")
-}
-
 func (c *Client) User(screenName string) (model.UserProfile, error) {
 	variables := map[string]any{
 		"screen_name":              screenName,

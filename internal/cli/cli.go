@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -33,12 +34,16 @@ type CLI struct {
 	AnalyzeTXID AnalyzeTXIDCmd            `cmd:"" name:"analyze-txid" help:"Analyze a captured txid JSONL corpus"`
 	HarvestTXID HarvestTXIDCmd            `cmd:"" name:"harvest-txid" help:"Extract salt samples from txid trace"`
 	CompareTXID CompareTXIDCmd            `cmd:"" name:"compare-txid" help:"Compare salts across operations to detect patterns"`
+	Capture     CaptureCmd                `cmd:"" help:"Capture X web operations from a live browser session"`
 	Analytics   AnalyticsCmd              `cmd:"" help:"Analytics dashboard for engagement metrics"`
 	Feed        FeedCmd                   `cmd:"" help:"Fetch the home timeline"`
 	Favorites   FavoritesCmd              `cmd:"" help:"Fetch bookmarked posts"`
 	Search      SearchCmd                 `cmd:"" help:"Search posts"`
 	Tweet       TweetCmd                  `cmd:"" help:"Show a post and replies"`
+	DM          DMCmd                     `cmd:"" name:"dm" help:"Browse direct message inbox and conversations"`
+	Communities CommunitiesCmd            `cmd:"" name:"communities" help:"Show community metadata and posts"`
 	List        ListCmd                   `cmd:"" name:"list" help:"Fetch posts from a list"`
+	Lists       ListsCmd                  `cmd:"" name:"lists" help:"Show list metadata, members, and followers"`
 	User        UserCmd                   `cmd:"" help:"Show a user profile"`
 	UserPosts   UserPostsCmd              `cmd:"" name:"user-posts" help:"Fetch posts from a user"`
 	UserSummary UserSummaryCmd            `cmd:"" name:"user-summary" help:"Generate LLM-readable summary of a user's recent posts"`
@@ -169,6 +174,43 @@ func (c *CompareTXIDCmd) Run(globals *Globals) error {
 		return err
 	}
 	return globals.Printer("").PrintSaltComparisons(comps)
+}
+
+type CaptureCmd struct {
+	URL      string        `arg:"" optional:"" help:"X page URL to open before capture" default:"https://x.com/home"`
+	Duration time.Duration `help:"How long to capture after the page loads" default:"20s"`
+	Filter   string        `help:"Only keep operations whose URL or name contains this substring"`
+	Output   string        `help:"Write capture output to a JSON file"`
+	NoBody   bool          `help:"Omit request and response bodies from capture output"`
+}
+
+func (c *CaptureCmd) Run(globals *Globals) error {
+	fmt.Printf("Opening %s and capturing X web operations for %s.\n", c.URL, c.Duration)
+	fmt.Println("Interact with the page while capture is running.")
+
+	result, err := globals.Client.CaptureWebOperations(xapi.WebCaptureOptions{
+		URL:           c.URL,
+		Duration:      c.Duration,
+		Filter:        c.Filter,
+		IncludeBodies: !c.NoBody,
+	})
+	if err != nil {
+		return err
+	}
+
+	if c.Output != "" {
+		data, err := json.MarshalIndent(result, "", "  ")
+		if err != nil {
+			return err
+		}
+		if err := os.WriteFile(c.Output, data, 0600); err != nil {
+			return err
+		}
+		fmt.Printf("Captured %d operations to %s\n", len(result.Operations), c.Output)
+		return nil
+	}
+
+	return globals.Printer("").PrintAny(result)
 }
 
 type DoctorCmd struct{}
@@ -525,6 +567,66 @@ func (c *TweetCmd) Run(globals *Globals) error {
 	return globals.Printer("").PrintTweetThread(thread)
 }
 
+type DMCmd struct {
+	Inbox DMinboxCmd `cmd:"" help:"List recent direct message conversations"`
+	Show  DMShowCmd  `cmd:"" help:"Show a direct message conversation"`
+}
+
+type DMinboxCmd struct {
+	Max int `help:"Maximum conversations to fetch" default:"20"`
+}
+
+func (c *DMinboxCmd) Run(globals *Globals) error {
+	inbox, err := globals.Client.DMInbox(c.Max)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintDMInbox(inbox)
+}
+
+type DMShowCmd struct {
+	Conversation string `arg:"" help:"Conversation ID or full messages URL"`
+	Max          int    `help:"Maximum messages to show" default:"50"`
+}
+
+func (c *DMShowCmd) Run(globals *Globals) error {
+	thread, err := globals.Client.DMThread(c.Conversation, c.Max)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintDMThread(thread)
+}
+
+type CommunitiesCmd struct {
+	Show  CommunitiesShowCmd  `cmd:"" help:"Show community metadata"`
+	Posts CommunitiesPostsCmd `cmd:"" help:"Show posts from a community"`
+}
+
+type CommunitiesShowCmd struct {
+	CommunityID string `arg:"" help:"X community ID"`
+}
+
+func (c *CommunitiesShowCmd) Run(globals *Globals) error {
+	community, err := globals.Client.CommunityDetails(c.CommunityID)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintCommunity(community)
+}
+
+type CommunitiesPostsCmd struct {
+	CommunityID string `arg:"" help:"X community ID"`
+	Max         int    `help:"Maximum posts to fetch" default:"20"`
+}
+
+func (c *CommunitiesPostsCmd) Run(globals *Globals) error {
+	result, err := globals.Client.CommunityPosts(c.CommunityID, c.Max)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintTimeline(result)
+}
+
 type ListCmd struct {
 	ListID string `arg:"" help:"X list ID"`
 	Max    int    `help:"Maximum posts to fetch" default:"20"`
@@ -536,6 +638,50 @@ func (c *ListCmd) Run(globals *Globals) error {
 		return err
 	}
 	return globals.Printer("").PrintTimeline(result)
+}
+
+type ListsCmd struct {
+	Show      ListsShowCmd      `cmd:"" help:"Show list metadata"`
+	Members   ListsMembersCmd   `cmd:"" help:"Show members of a list"`
+	Followers ListsFollowersCmd `cmd:"" help:"Show followers of a list"`
+}
+
+type ListsShowCmd struct {
+	ListID string `arg:"" help:"X list ID"`
+}
+
+func (c *ListsShowCmd) Run(globals *Globals) error {
+	list, err := globals.Client.ListDetails(c.ListID)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintList(list)
+}
+
+type ListsMembersCmd struct {
+	ListID string `arg:"" help:"X list ID"`
+	Max    int    `help:"Maximum users to fetch" default:"20"`
+}
+
+func (c *ListsMembersCmd) Run(globals *Globals) error {
+	users, err := globals.Client.ListMembers(c.ListID, c.Max)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintUsers(users)
+}
+
+type ListsFollowersCmd struct {
+	ListID string `arg:"" help:"X list ID"`
+	Max    int    `help:"Maximum users to fetch" default:"20"`
+}
+
+func (c *ListsFollowersCmd) Run(globals *Globals) error {
+	users, err := globals.Client.ListFollowers(c.ListID, c.Max)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintUsers(users)
 }
 
 type UserCmd struct {
