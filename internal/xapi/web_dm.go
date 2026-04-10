@@ -215,6 +215,98 @@ func (c *Client) DMThread(conversationID string, count int) (model.DMThread, err
 	}, nil
 }
 
+func (c *Client) SendDM(conversationID string, text string) (model.ActionResult, error) {
+	if c.authSession == nil || len(c.authSession.Cookies) == 0 {
+		return model.ActionResult{}, errors.New("authenticated browser session required")
+	}
+	conversationID = normalizeConversationID(conversationID)
+	if conversationID == "" {
+		return model.ActionResult{}, errors.New("conversation ID is required")
+	}
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return model.ActionResult{}, errors.New("message text cannot be empty")
+	}
+
+	pageURL := "https://x.com/messages/" + url.PathEscape(conversationID)
+	session, err := c.newBrowserSession(75 * time.Second)
+	if err != nil {
+		return model.ActionResult{}, err
+	}
+	defer session.Close()
+
+	err = chromedp.Run(session.ctx,
+		network.Enable(),
+		chromedp.ActionFunc(func(ctx context.Context) error { return setBrowserCookies(ctx, c.authSession.Cookies) }),
+		chromedp.Navigate("https://x.com/home"),
+		chromedp.Sleep(2*time.Second),
+		chromedp.Navigate(pageURL),
+		chromedp.Sleep(4*time.Second),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var ok bool
+			script := fmt.Sprintf(`(() => {
+				const text = %q;
+				const visible = (el) => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+				const composer = Array.from(document.querySelectorAll('[contenteditable="true"], textarea')).find(visible);
+				if (!composer) return false;
+				composer.focus();
+				if ('value' in composer) {
+					composer.value = text;
+					composer.dispatchEvent(new Event('input', { bubbles: true }));
+				} else {
+					composer.textContent = text;
+					composer.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' }));
+				}
+				return true;
+			})()`, text)
+			if err := chromedp.Evaluate(script, &ok).Do(ctx); err != nil {
+				return err
+			}
+			if !ok {
+				return errors.New("dm composer not found")
+			}
+			return nil
+		}),
+		chromedp.Sleep(1500*time.Millisecond),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var ok bool
+			script := `(() => {
+				const visible = (el) => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+				const candidates = Array.from(document.querySelectorAll('button, div[role="button"]'));
+				const button = candidates.find((el) => {
+					const label = String(el.getAttribute('aria-label') || el.innerText || '').toLowerCase();
+					return visible(el) && !el.disabled && (label.includes('send') || label.includes('message'));
+				});
+				if (!button) return false;
+				button.click();
+				return true;
+			})()`
+			if err := chromedp.Evaluate(script, &ok).Do(ctx); err != nil {
+				return err
+			}
+			if !ok {
+				return errors.New("dm send button not found")
+			}
+			return nil
+		}),
+		chromedp.Sleep(2500*time.Millisecond),
+	)
+	if err != nil {
+		return model.ActionResult{}, err
+	}
+
+	thread, err := c.DMThread(conversationID, 10)
+	if err == nil {
+		for i := len(thread.Messages) - 1; i >= 0; i-- {
+			if cleanDMText(thread.Messages[i].Text) == cleanDMText(text) {
+				return model.ActionResult{Action: "dm-send", Target: conversationID, Success: true, URL: pageURL, Message: "direct message sent"}, nil
+			}
+		}
+	}
+
+	return model.ActionResult{Action: "dm-send", Target: conversationID, Success: true, URL: pageURL, Message: "direct message submitted"}, nil
+}
+
 func normalizeConversationID(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {

@@ -263,6 +263,36 @@ func (p *Printer) PrintTrends(trends []model.Trend) error {
 	}
 }
 
+func (p *Printer) PrintNews(items []model.NewsItem) error {
+	switch p.format {
+	case "json":
+		return p.printAny(items)
+	case "markdown":
+		fmt.Println("# News")
+		fmt.Println()
+		for _, item := range items {
+			fmt.Printf("- %s", item.Headline)
+			if item.Source != "" {
+				fmt.Printf(" (%s)", item.Source)
+			}
+			fmt.Println()
+		}
+		return nil
+	default:
+		if len(items) == 0 {
+			fmt.Println("No news items found.")
+			return nil
+		}
+		tbl := table.New("Headline", "Source", "Meta").WithWriter(os.Stdout)
+		p.styleHeader(tbl)
+		for _, item := range items {
+			tbl.AddRow(truncate(item.Headline, 72), item.Source, truncate(item.Meta, 48))
+		}
+		tbl.Print()
+		return nil
+	}
+}
+
 func (p *Printer) PrintDMInbox(inbox model.DMInbox) error {
 	switch p.format {
 	case "json":

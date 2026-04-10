@@ -42,6 +42,7 @@ type CLI struct {
 	Tweet       TweetCmd                  `cmd:"" help:"Show a post and replies"`
 	DM          DMCmd                     `cmd:"" name:"dm" help:"Browse direct message inbox and conversations"`
 	Communities CommunitiesCmd            `cmd:"" name:"communities" help:"Show community metadata and posts"`
+	News        NewsCmd                   `cmd:"" name:"news" help:"Show current news from Explore"`
 	Spaces      SpacesCmd                 `cmd:"" name:"spaces" help:"Show space metadata"`
 	Trends      TrendsCmd                 `cmd:"" name:"trends" help:"Show current trending topics"`
 	List        ListCmd                   `cmd:"" name:"list" help:"Fetch posts from a list"`
@@ -572,6 +573,7 @@ func (c *TweetCmd) Run(globals *Globals) error {
 type DMCmd struct {
 	Inbox DMinboxCmd `cmd:"" help:"List recent direct message conversations"`
 	Show  DMShowCmd  `cmd:"" help:"Show a direct message conversation"`
+	Send  DMSendCmd  `cmd:"" help:"Send a direct message to an existing conversation"`
 }
 
 type DMinboxCmd struct {
@@ -597,6 +599,19 @@ func (c *DMShowCmd) Run(globals *Globals) error {
 		return err
 	}
 	return globals.Printer("").PrintDMThread(thread)
+}
+
+type DMSendCmd struct {
+	Conversation string `arg:"" help:"Conversation ID or full messages URL"`
+	Text         string `arg:"" help:"Message text to send"`
+}
+
+func (c *DMSendCmd) Run(globals *Globals) error {
+	result, err := globals.Client.SendDM(c.Conversation, c.Text)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintActionResult(result)
 }
 
 type CommunitiesCmd struct {
@@ -627,6 +642,18 @@ func (c *CommunitiesPostsCmd) Run(globals *Globals) error {
 		return err
 	}
 	return globals.Printer("").PrintTimeline(result)
+}
+
+type NewsCmd struct {
+	Max int `help:"Maximum news items to fetch" default:"20"`
+}
+
+func (c *NewsCmd) Run(globals *Globals) error {
+	items, err := globals.Client.News(c.Max)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintNews(items)
 }
 
 type SpacesCmd struct {
