@@ -25,6 +25,19 @@
 
 ---
 
+## Architecture
+
+X-CLI uses **browser automation** and the **X web GraphQL API** rather than the official X API v2 REST endpoints. This approach:
+
+- Works without official API keys or paid tiers
+- Provides access to features restricted or removed from self-serve API access
+- Uses real browser sessions with OAuth 2.0 authentication
+- Intercepts GraphQL mutations for posting, liking, following, etc.
+
+**Note:** Unlike official API v2 clients, X-CLI operates through the same interface as the X website, making it resilient to API pricing and tier changes that affect self-serve developers.
+
+---
+
 ## Installation
 
 ### Homebrew (macOS/Linux)
@@ -968,6 +981,9 @@ cp mcp-config.json ~/.config/claude/claude_desktop_config.json
 - `x unretweet` - Undo a repost
 - `x bookmark` - Bookmark a post
 - `x unbookmark` - Remove a bookmark
+- `x quote <id> "text"` - Quote a post with comment
+- `x follow <username>` - Follow a user
+- `x unfollow <username>` - Unfollow a user
 
 ### Scheduling
 - `x schedule save` - Schedule a post for later

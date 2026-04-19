@@ -65,6 +65,9 @@ type CLI struct {
 	Unretweet   UnretweetCmd              `cmd:"" help:"Undo a repost"`
 	Bookmark    BookmarkCmd               `cmd:"" help:"Bookmark a post"`
 	Unbookmark  UnbookmarkCmd             `cmd:"" help:"Remove a bookmark"`
+	Quote       QuoteCmd                  `cmd:"" help:"Quote a post with comment"`
+	Follow      FollowCmd                 `cmd:"" help:"Follow a user"`
+	Unfollow    UnfollowCmd               `cmd:"" help:"Unfollow a user"`
 	Article     ArticleCmd                `cmd:"" help:"Publish a long-form article (requires X Premium)"`
 	Version     VersionCmd                `cmd:"" help:"Show version information"`
 	Completion  kongcompletion.Completion `cmd:"" help:"Generate shell completion scripts"`
@@ -1018,6 +1021,102 @@ func (c *UnbookmarkCmd) Run(globals *Globals) error {
 		return err
 	}
 	return globals.Printer("").PrintActionResult(result)
+}
+
+type QuoteCmd struct {
+	ID   string `arg:"" help:"Post ID or full status URL to quote"`
+	Text string `arg:"" help:"Quote comment text"`
+}
+
+func (c *QuoteCmd) Run(globals *Globals) error {
+	result, err := globals.Client.CreateQuotePost(
+		xapi.NormalizeTweetID(c.ID),
+		c.Text,
+	)
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintActionResult(result)
+}
+
+type FollowCmd struct {
+	ScreenName string `arg:"" help:"Username to follow (without @)" optional:""`
+	Batch      string `help:"File containing usernames (one per line)"`
+}
+
+func (c *FollowCmd) Run(globals *Globals) error {
+	if c.Batch != "" {
+		return processUserBatch(globals, c.Batch, globals.Client.FollowUser, "follow")
+	}
+
+	result, err := globals.Client.FollowUser(xapi.NormalizeScreenName(c.ScreenName))
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintActionResult(result)
+}
+
+type UnfollowCmd struct {
+	ScreenName string `arg:"" help:"Username to unfollow (without @)" optional:""`
+	Batch      string `help:"File containing usernames (one per line)"`
+}
+
+func (c *UnfollowCmd) Run(globals *Globals) error {
+	if c.Batch != "" {
+		return processUserBatch(globals, c.Batch, globals.Client.UnfollowUser, "unfollow")
+	}
+
+	result, err := globals.Client.UnfollowUser(xapi.NormalizeScreenName(c.ScreenName))
+	if err != nil {
+		return err
+	}
+	return globals.Printer("").PrintActionResult(result)
+}
+
+func processUserBatch(globals *Globals, filePath string, action func(string) (model.ActionResult, error), actionName string) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("read batch file: %w", err)
+	}
+
+	lines := strings.Split(string(data), "\n")
+	users := make([]string, 0)
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "#") {
+			users = append(users, xapi.NormalizeScreenName(line))
+		}
+	}
+
+	if len(users) == 0 {
+		return fmt.Errorf("no usernames found in batch file")
+	}
+
+	fmt.Printf("Processing %d users...\n", len(users))
+
+	successCount := 0
+	failCount := 0
+
+	for i, user := range users {
+		fmt.Printf("[%d/%d] %s %s... ", i+1, len(users), actionName, user)
+
+		_, err := action(user)
+		if err != nil {
+			fmt.Printf("FAILED: %v\n", err)
+			failCount++
+		} else {
+			fmt.Println("OK")
+			successCount++
+		}
+
+		if i < len(users)-1 {
+			delay := time.Duration(1500+rand.Intn(1000)) * time.Millisecond
+			time.Sleep(delay)
+		}
+	}
+
+	fmt.Printf("\nCompleted: %d success, %d failed\n", successCount, failCount)
+	return nil
 }
 
 func processBatch(globals *Globals, filePath string, action func(string) (model.ActionResult, error), actionName string) error {

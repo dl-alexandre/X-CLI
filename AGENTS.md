@@ -4,6 +4,22 @@
 
 X-CLI is a terminal-first CLI for X built in Go. It provides a professional-grade, AI-friendly tool for power users and automation workflows.
 
+### Important Distinction
+
+X-CLI uses **browser automation** and the **X web GraphQL API**, not the official X API v2 REST endpoints. This means:
+- No dependency on API v2 pricing tiers or rate limits
+- Access to features that are being removed from self-serve API access (quote-posting, following, likes)
+- Requires OAuth 2.0 browser authentication
+- Operates through the same interface as the X website
+
+### Recent API Changes (April 2026)
+
+X API v2 removed quote-posting, following, and like operations from self-serve tiers. X-CLI provides these features via browser automation:
+- `x quote <id> "text"` - Quote posts with comment
+- `x follow <username>` - Follow users
+- `x unfollow <username>` - Unfollow users
+- All existing like/unlike/retweet operations remain available
+
 ## Architecture
 
 ### Package Structure
@@ -74,6 +90,9 @@ internal/
 - `x like/unlike` - Like actions
 - `x repost/unrepost` - Repost actions
 - `x bookmark/unbookmark` - Bookmark actions
+- `x quote <id> "text"` - Quote post with comment
+- `x follow <username>` - Follow user
+- `x unfollow <username>` - Unfollow user
 
 ## Configuration
 

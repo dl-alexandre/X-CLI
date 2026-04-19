@@ -735,6 +735,92 @@ func (c *Client) DeletePost(id string) (model.ActionResult, error) {
 	return model.ActionResult{Action: "delete", Target: id, Success: true, Message: "post deleted"}, nil
 }
 
+func (c *Client) CreateQuotePost(id string, text string) (model.ActionResult, error) {
+	if strings.TrimSpace(text) == "" {
+		return model.ActionResult{}, errors.New("quote text cannot be empty")
+	}
+
+	var profileURL string
+	mutation, err := c.runBrowserMutation("CreateTweet", func(ctx context.Context) error {
+		if err := chromedp.Navigate(tweetURL(id)).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.WaitVisible(`[data-testid="retweet"]`, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.Click(`[data-testid="retweet"]`, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.Sleep(500 * time.Millisecond).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.WaitVisible(`//span[text()="Quote"]`, chromedp.BySearch).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.Click(`//span[text()="Quote"]`, chromedp.BySearch).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.WaitVisible(`[data-testid="tweetTextarea_0"]`, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.AttributeValue(`[data-testid="AppTabBar_Profile_Link"]`, "href", &profileURL, nil, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.SendKeys(`[data-testid="tweetTextarea_0"]`, text, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.Sleep(1200 * time.Millisecond).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.Click(`[data-testid="tweetButtonInline"]`, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		return chromedp.Sleep(3 * time.Second).Do(ctx)
+	})
+	if err != nil {
+		return model.ActionResult{}, err
+	}
+
+	body, ok := mutation.Payload.(map[string]any)
+	if !ok {
+		return model.ActionResult{}, errors.New("create quote tweet returned an unexpected response")
+	}
+
+	tweetID := stringValue(deepGet(body, "data", "create_tweet", "tweet_results", "result", "rest_id"))
+	if tweetID == "" {
+		tweetID = stringValue(deepGet(body, "data", "create_tweet", "tweet_results", "result", "tweet", "rest_id"))
+	}
+	if tweetID == "" {
+		tweetID = stringValue(deepGet(body, "data", "create_tweet", "tweet_results", "result", "legacy", "id_str"))
+	}
+	if tweetID == "" {
+		tweetID = stringValue(deepGet(body, "data", "create_tweet", "tweet_results", "result", "tweet", "legacy", "id_str"))
+	}
+	if tweetID == "" {
+		tweetID = stringValue(deepGet(body, "data", "create_tweet", "tweet_result", "result", "rest_id"))
+	}
+	if tweetID == "" {
+		tweetID = findTweetID(body)
+	}
+
+	if tweetID != "" {
+		return model.ActionResult{Action: "quote", Target: id, Success: true, URL: tweetURL(tweetID), Message: "quote posted"}, nil
+	}
+
+	if profileURL != "" {
+		if createdURL, confirmErr := c.confirmPostedTweet("https://x.com"+profileURL, firstLine(text)); confirmErr == nil && createdURL != "" {
+			return model.ActionResult{Action: "quote", Target: id, Success: true, URL: createdURL, Message: "quote posted"}, nil
+		}
+	}
+
+	payloadBytes, _ := json.Marshal(mutation.Payload)
+	if mutation.Status == 200 {
+		return model.ActionResult{}, fmt.Errorf("quote posted but could not confirm post id from payload: %s", truncateForError(string(payloadBytes)))
+	}
+
+	return model.ActionResult{}, fmt.Errorf("quote was not confirmed by X (status=%d payload=%s)", mutation.Status, truncateForError(string(payloadBytes)))
+}
+
 func (c *Client) LikePost(id string) (model.ActionResult, error) {
 	return c.browserTweetAction(id, `[data-testid="like"]`, `[data-testid="unlike"]`, "like", "post liked")
 }
@@ -879,6 +965,36 @@ func (c *Client) UnbookmarkPost(id string) (model.ActionResult, error) {
 		return model.ActionResult{}, err
 	}
 	return model.ActionResult{Action: "unbookmark", Target: id, Success: true, Message: "bookmark removed"}, nil
+}
+
+func (c *Client) FollowUser(screenName string) (model.ActionResult, error) {
+	return c.browserUserAction(screenName, `[data-testid="follow"]`, `[data-testid="unfollow"]`, "follow", "user followed")
+}
+
+func (c *Client) UnfollowUser(screenName string) (model.ActionResult, error) {
+	return c.browserUserAction(screenName, `[data-testid="unfollow"]`, `[data-testid="follow"]`, "unfollow", "user unfollowed")
+}
+
+func (c *Client) browserUserAction(screenName string, selector string, expectedAfter string, action string, message string) (model.ActionResult, error) {
+	err := c.runBrowserFlow(func(ctx context.Context) error {
+		if err := chromedp.Navigate("https://x.com/" + url.PathEscape(screenName)).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.WaitVisible(selector, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.Click(selector, chromedp.ByQuery).Do(ctx); err != nil {
+			return err
+		}
+		if err := chromedp.Sleep(1500 * time.Millisecond).Do(ctx); err != nil {
+			return err
+		}
+		return chromedp.WaitVisible(expectedAfter, chromedp.ByQuery).Do(ctx)
+	})
+	if err != nil {
+		return model.ActionResult{}, err
+	}
+	return model.ActionResult{Action: action, Target: screenName, Success: true, Message: message}, nil
 }
 
 func (c *Client) graphQLGet(operation string, variables map[string]any, features map[string]bool, fieldToggles map[string]any, referer string) (any, error) {
