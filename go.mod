@@ -9,7 +9,7 @@ require (
 	github.com/chromedp/chromedp v0.15.1
 	github.com/dl-alexandre/cli-tools v0.0.1
 	github.com/jotaen/kong-completion v0.0.12
-	github.com/mattn/go-isatty v0.0.21
+	github.com/mattn/go-isatty v0.0.22
 	github.com/refraction-networking/utls v1.8.2
 	github.com/rodaine/table v1.3.1
 	github.com/spf13/viper v1.21.0
