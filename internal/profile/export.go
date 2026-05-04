@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/dl-alexandre/X-CLI/internal/auth"
@@ -21,6 +22,8 @@ const (
 	ExportVersion = "1.0"
 	ExportFormat  = "x-cli-profile"
 )
+
+var uniqueProfileNameCounter uint64
 
 type ConflictResolution string
 
@@ -459,7 +462,8 @@ func getExportSource() string {
 
 func generateUniqueProfileName(base string) string {
 	timestamp := time.Now().UnixNano()
-	return fmt.Sprintf("%s-%d", base, timestamp)
+	counter := atomic.AddUint64(&uniqueProfileNameCounter, 1)
+	return fmt.Sprintf("%s-%d-%d", base, timestamp, counter)
 }
 
 func writeExportFile(exported *ExportedProfile, path string) error {
