@@ -178,13 +178,6 @@ func (c *AnalyticsCollector) load() error {
 	return nil
 }
 
-func (c *AnalyticsCollector) save() error {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return c.saveLocked()
-}
-
 func (c *AnalyticsCollector) saveLocked() error {
 	data, err := json.MarshalIndent(struct {
 		Tweets    map[string][]TweetRecord       `json:"tweets"`
@@ -657,7 +650,7 @@ func (c *AnalyticsCollector) ExportToCSV(screenName string, outputPath string) e
 	if err != nil {
 		return fmt.Errorf("create csv: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()

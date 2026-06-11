@@ -15,14 +15,14 @@ func TestExportProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tempDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tempDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	storage := auth.NewTokenStorageWithProfile("test-export")
-	storage.Save(&auth.OAuthToken{
+	_ = storage.Save(&auth.OAuthToken{
 		AccessToken:  "test_access_token",
 		TokenType:    "Bearer",
 		ExpiresIn:    7200,
@@ -75,11 +75,11 @@ func TestExportProfile_NonExistent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tempDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tempDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	_, err = ExportProfile("nonexistent", ExportOptions{})
 	if err == nil {
@@ -92,11 +92,11 @@ func TestImportProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tempDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tempDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	originalToken := &auth.OAuthToken{
 		AccessToken:  "import_test_access_token",
@@ -126,7 +126,7 @@ func TestImportProfile(t *testing.T) {
 
 	exportPath := filepath.Join(tempDir, "import.json")
 	data, _ := json.MarshalIndent(exported, "", "  ")
-	os.WriteFile(exportPath, data, 0600)
+	_ = os.WriteFile(exportPath, data, 0600)
 
 	token, err := ImportProfile(ImportOptions{
 		InputPath:          exportPath,
@@ -166,14 +166,14 @@ func TestImportProfile_ConflictResolution(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create temp dir: %v", err)
 			}
-			defer os.RemoveAll(tempDir)
+			defer func() { _ = os.RemoveAll(tempDir) }()
 
 			originalHome := os.Getenv("HOME")
-			os.Setenv("HOME", tempDir)
-			defer os.Setenv("HOME", originalHome)
+			_ = os.Setenv("HOME", tempDir)
+			defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 			storage := auth.NewTokenStorageWithProfile("conflict-test")
-			storage.Save(&auth.OAuthToken{
+			_ = storage.Save(&auth.OAuthToken{
 				AccessToken:  "existing_token",
 				RefreshToken: "existing_refresh",
 				ExpiresAt:    time.Now().Add(2 * time.Hour),
@@ -194,7 +194,7 @@ func TestImportProfile_ConflictResolution(t *testing.T) {
 
 			exportPath := filepath.Join(tempDir, "conflict.json")
 			data, _ := json.MarshalIndent(exported, "", "  ")
-			os.WriteFile(exportPath, data, 0600)
+			_ = os.WriteFile(exportPath, data, 0600)
 
 			_, err = ImportProfile(ImportOptions{
 				InputPath:          exportPath,
@@ -216,11 +216,11 @@ func TestImportProfile_WithNewName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tempDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tempDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	exported := &ExportedProfile{
 		Version:     ExportVersion,
@@ -233,7 +233,7 @@ func TestImportProfile_WithNewName(t *testing.T) {
 
 	exportPath := filepath.Join(tempDir, "rename.json")
 	data, _ := json.MarshalIndent(exported, "", "  ")
-	os.WriteFile(exportPath, data, 0600)
+	_ = os.WriteFile(exportPath, data, 0600)
 
 	_, err = ImportProfile(ImportOptions{
 		InputPath: exportPath,
@@ -562,21 +562,21 @@ func TestBackupAllProfiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tempDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tempDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	storage1 := auth.NewTokenStorageWithProfile("backup1")
-	storage1.Save(&auth.OAuthToken{
+	_ = storage1.Save(&auth.OAuthToken{
 		AccessToken:  "token1",
 		RefreshToken: "refresh1",
 		ExpiresAt:    time.Now().Add(2 * time.Hour),
 	})
 
 	storage2 := auth.NewTokenStorageWithProfile("backup2")
-	storage2.Save(&auth.OAuthToken{
+	_ = storage2.Save(&auth.OAuthToken{
 		AccessToken:  "token2",
 		RefreshToken: "refresh2",
 		ExpiresAt:    time.Now().Add(2 * time.Hour),
@@ -606,11 +606,11 @@ func TestRestoreBackup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	originalHome := os.Getenv("HOME")
-	os.Setenv("HOME", tempDir)
-	defer os.Setenv("HOME", originalHome)
+	_ = os.Setenv("HOME", tempDir)
+	defer func() { _ = os.Setenv("HOME", originalHome) }()
 
 	backup := &BackupFile{
 		Version:    ExportVersion,
@@ -639,7 +639,7 @@ func TestRestoreBackup(t *testing.T) {
 
 	backupPath := filepath.Join(tempDir, "restore.json")
 	data, _ := json.MarshalIndent(backup, "", "  ")
-	os.WriteFile(backupPath, data, 0600)
+	_ = os.WriteFile(backupPath, data, 0600)
 
 	imported, err := RestoreBackup(backupPath, ConflictSkip)
 	if err != nil {

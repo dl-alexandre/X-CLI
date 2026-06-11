@@ -13,7 +13,7 @@ func TestNewTemplateStore(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -34,7 +34,7 @@ func TestTemplateSave(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -73,7 +73,7 @@ func TestTemplateGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -105,7 +105,7 @@ func TestTemplateDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -141,7 +141,7 @@ func TestTemplateList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -167,7 +167,7 @@ func TestTemplateListByCategory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -194,7 +194,7 @@ func TestTemplateCategories(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -216,7 +216,7 @@ func TestTemplateUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -369,7 +369,7 @@ func TestTemplateExport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -398,7 +398,7 @@ func TestTemplateImport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -437,7 +437,7 @@ func TestTemplateExportAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -467,7 +467,7 @@ func TestTemplateImportAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	store, err := NewTemplateStoreWithDir(dir)
 	if err != nil {
@@ -503,7 +503,7 @@ func TestTemplateLoadFromFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	templateData := Template{
 		Name:        "file-template",

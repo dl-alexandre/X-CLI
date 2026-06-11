@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +14,7 @@ func TestSchedule(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	store := &ScheduleStore{
 		filePath: filepath.Join(tmpDir, "scheduled.json"),
@@ -51,12 +52,12 @@ func TestScheduleEmptyText(t *testing.T) {
 
 	future := time.Now().Add(1 * time.Hour)
 	_, err := store.Schedule("", future)
-	if err != ErrEmptyText {
+	if !errors.Is(err, ErrEmptyText) {
 		t.Errorf("Expected ErrEmptyText, got %v", err)
 	}
 
 	_, err = store.Schedule("   ", future)
-	if err != ErrEmptyText {
+	if !errors.Is(err, ErrEmptyText) {
 		t.Errorf("Expected ErrEmptyText for whitespace, got %v", err)
 	}
 }
@@ -69,7 +70,7 @@ func TestScheduleTimeInPast(t *testing.T) {
 
 	past := time.Now().Add(-1 * time.Hour)
 	_, err := store.Schedule("Test tweet", past)
-	if err != ErrTimeInPast {
+	if !errors.Is(err, ErrTimeInPast) {
 		t.Errorf("Expected ErrTimeInPast, got %v", err)
 	}
 }
@@ -79,7 +80,7 @@ func TestList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	store := &ScheduleStore{
 		filePath: filepath.Join(tmpDir, "scheduled.json"),
@@ -130,7 +131,7 @@ func TestCancel(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	store := &ScheduleStore{
 		filePath: filepath.Join(tmpDir, "scheduled.json"),
@@ -158,7 +159,7 @@ func TestCancelNotFound(t *testing.T) {
 	}
 
 	err := store.Cancel("nonexistent")
-	if err != ErrNotFound {
+	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("Expected ErrNotFound, got %v", err)
 	}
 }
@@ -173,7 +174,7 @@ func TestCancelAlreadyPosted(t *testing.T) {
 	store.tweets["1"] = ScheduledTweet{ID: "1", Text: "Test", Scheduled: now.Add(1 * time.Hour), Status: "posted"}
 
 	err := store.Cancel("1")
-	if err != ErrAlreadyPosted {
+	if !errors.Is(err, ErrAlreadyPosted) {
 		t.Errorf("Expected ErrAlreadyPosted, got %v", err)
 	}
 }
@@ -188,7 +189,7 @@ func TestCancelAlreadyCancelled(t *testing.T) {
 	store.tweets["1"] = ScheduledTweet{ID: "1", Text: "Test", Scheduled: now.Add(1 * time.Hour), Status: "cancelled"}
 
 	err := store.Cancel("1")
-	if err != ErrAlreadyCancelled {
+	if !errors.Is(err, ErrAlreadyCancelled) {
 		t.Errorf("Expected ErrAlreadyCancelled, got %v", err)
 	}
 }
@@ -198,7 +199,7 @@ func TestMarkPosted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	store := &ScheduleStore{
 		filePath: filepath.Join(tmpDir, "scheduled.json"),
@@ -246,7 +247,7 @@ func TestDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	store := &ScheduleStore{
 		filePath: filepath.Join(tmpDir, "scheduled.json"),
@@ -262,7 +263,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	_, err = store.Get("1")
-	if err != ErrNotFound {
+	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("Expected ErrNotFound after delete, got %v", err)
 	}
 }
@@ -274,7 +275,7 @@ func TestDeleteNotFound(t *testing.T) {
 	}
 
 	err := store.Delete("nonexistent")
-	if err != ErrNotFound {
+	if !errors.Is(err, ErrNotFound) {
 		t.Errorf("Expected ErrNotFound, got %v", err)
 	}
 }
@@ -427,7 +428,7 @@ func TestPersistence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	filePath := filepath.Join(tmpDir, "scheduled.json")
 

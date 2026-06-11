@@ -104,9 +104,8 @@ func NewClient(opts Options) *Client {
 	session, _ := auth.Load(opts.Config)
 	txProvider := NewNativeTransactionProvider()
 	if opts.Config != nil && opts.Config.Browser.StaticSalt != "" {
-		if err := txProvider.SetStaticSalt(opts.Config.Browser.StaticSalt); err != nil {
-			// Log error but continue with placeholder
-		}
+		// Errors are ignored; continue with placeholder salt.
+		_ = txProvider.SetStaticSalt(opts.Config.Browser.StaticSalt)
 	}
 	traceFile := ""
 	traceMode := "writes"
@@ -1521,7 +1520,7 @@ func intValue(value any) int {
 		i, _ := typed.Int64()
 		return int(i)
 	case string:
-		var asNumber json.Number = json.Number(strings.TrimSpace(typed))
+		asNumber := json.Number(strings.TrimSpace(typed))
 		if i, err := asNumber.Int64(); err == nil {
 			return int(i)
 		}
@@ -1541,7 +1540,7 @@ func int64Value(value any) int64 {
 		i, _ := typed.Int64()
 		return i
 	case string:
-		var asNumber json.Number = json.Number(strings.TrimSpace(typed))
+		asNumber := json.Number(strings.TrimSpace(typed))
 		if i, err := asNumber.Int64(); err == nil {
 			return i
 		}
@@ -1901,7 +1900,7 @@ func (c *Client) remoteDebugWebSocketURL() (string, error) {
 			continue
 		}
 		body, readErr := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if readErr != nil || resp.StatusCode >= 400 {
 			continue
 		}
@@ -2328,13 +2327,13 @@ func copyFileWithMode(src string, dst string, mode fs.FileMode) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, mode)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	if _, err := io.Copy(out, in); err != nil {
 		return err
@@ -2396,7 +2395,7 @@ func (c *Client) rawRequest(method string, urlString string, headers map[string]
 	if err != nil {
 		return nil, 0, nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -2491,22 +2490,4 @@ func (c *Client) browserArticle(id string) (model.Article, error) {
 	article.WordCount = len(strings.Fields(article.TextContent))
 
 	return article, nil
-}
-
-func getString(m map[string]any, key string) string {
-	if val, ok := m[key]; ok {
-		if s, ok := val.(string); ok {
-			return s
-		}
-	}
-	return ""
-}
-
-func getBool(m map[string]any, key string) bool {
-	if val, ok := m[key]; ok {
-		if b, ok := val.(bool); ok {
-			return b
-		}
-	}
-	return false
 }

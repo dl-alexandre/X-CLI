@@ -110,7 +110,7 @@ func TestShortenURL_TinyURL(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "api-create.php") {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("https://tinyurl.com/abc123"))
+			_, _ = w.Write([]byte("https://tinyurl.com/abc123"))
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -141,7 +141,7 @@ func TestShortenURL_IsGd(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "create.php") {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("https://is.gd/abc123"))
+			_, _ = w.Write([]byte("https://is.gd/abc123"))
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -172,7 +172,7 @@ func TestShortenURL_VGd(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "create.php") {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("https://v.gd/abc123"))
+			_, _ = w.Write([]byte("https://v.gd/abc123"))
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -202,7 +202,7 @@ func TestShortenURL_VGd(t *testing.T) {
 func TestShortenURL_Custom(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"short_url": "https://short.link/abc"}`))
+		_, _ = w.Write([]byte(`{"short_url": "https://short.link/abc"}`))
 	}))
 	defer server.Close()
 
@@ -230,7 +230,7 @@ func TestShortenURL_Custom(t *testing.T) {
 func TestShortenURL_CustomPlainText(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("https://short.link/xyz"))
+		_, _ = w.Write([]byte("https://short.link/xyz"))
 	}))
 	defer server.Close()
 
@@ -278,7 +278,7 @@ func TestShortenAllURLs_NoURLs(t *testing.T) {
 func TestShortenAllURLs_MultipleURLs(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("https://short.link/abc"))
+		_, _ = w.Write([]byte("https://short.link/abc"))
 	}))
 	defer server.Close()
 

@@ -108,7 +108,7 @@ func (c *Client) UploadMediaWithProgress(filePath string, progressCB ProgressCal
 	if err != nil {
 		return nil, fmt.Errorf("upload request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {

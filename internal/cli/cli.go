@@ -279,7 +279,7 @@ func (c *RefreshCmd) Run(globals *Globals) error {
 	}
 
 	// Delete old session
-	auth.DeleteSession(profile)
+	_ = auth.DeleteSession(profile)
 
 	// Re-login with browser
 	session, err := auth.BrowserLogin()
@@ -343,13 +343,6 @@ func (c *ProfilesCmd) Run(globals *Globals) error {
 	}
 
 	return nil
-}
-
-func storageLocation(storage *auth.TokenStorage) string {
-	if storage.IsKeyringAvailable() {
-		return "system keychain"
-	}
-	return "encrypted file (~/.config/x-cli/tokens.json.enc)"
 }
 
 type ProfilesExportCmd struct {
@@ -928,7 +921,7 @@ type LikeCmd struct {
 
 func (c *LikeCmd) Run(globals *Globals) error {
 	if c.Batch != "" {
-		return processBatch(globals, c.Batch, globals.Client.LikePost, "like")
+		return processBatch(c.Batch, globals.Client.LikePost, "like")
 	}
 
 	result, err := globals.Client.LikePost(xapi.NormalizeTweetID(c.ID))
@@ -945,7 +938,7 @@ type UnlikeCmd struct {
 
 func (c *UnlikeCmd) Run(globals *Globals) error {
 	if c.Batch != "" {
-		return processBatch(globals, c.Batch, globals.Client.UnlikePost, "unlike")
+		return processBatch(c.Batch, globals.Client.UnlikePost, "unlike")
 	}
 
 	result, err := globals.Client.UnlikePost(xapi.NormalizeTweetID(c.ID))
@@ -962,7 +955,7 @@ type RetweetCmd struct {
 
 func (c *RetweetCmd) Run(globals *Globals) error {
 	if c.Batch != "" {
-		return processBatch(globals, c.Batch, globals.Client.RetweetPost, "retweet")
+		return processBatch(c.Batch, globals.Client.RetweetPost, "retweet")
 	}
 
 	result, err := globals.Client.RetweetPost(xapi.NormalizeTweetID(c.ID))
@@ -979,7 +972,7 @@ type UnretweetCmd struct {
 
 func (c *UnretweetCmd) Run(globals *Globals) error {
 	if c.Batch != "" {
-		return processBatch(globals, c.Batch, globals.Client.UnretweetPost, "unretweet")
+		return processBatch(c.Batch, globals.Client.UnretweetPost, "unretweet")
 	}
 
 	result, err := globals.Client.UnretweetPost(xapi.NormalizeTweetID(c.ID))
@@ -996,7 +989,7 @@ type BookmarkCmd struct {
 
 func (c *BookmarkCmd) Run(globals *Globals) error {
 	if c.Batch != "" {
-		return processBatch(globals, c.Batch, globals.Client.BookmarkPost, "bookmark")
+		return processBatch(c.Batch, globals.Client.BookmarkPost, "bookmark")
 	}
 
 	result, err := globals.Client.BookmarkPost(xapi.NormalizeTweetID(c.ID))
@@ -1013,7 +1006,7 @@ type UnbookmarkCmd struct {
 
 func (c *UnbookmarkCmd) Run(globals *Globals) error {
 	if c.Batch != "" {
-		return processBatch(globals, c.Batch, globals.Client.UnbookmarkPost, "unbookmark")
+		return processBatch(c.Batch, globals.Client.UnbookmarkPost, "unbookmark")
 	}
 
 	result, err := globals.Client.UnbookmarkPost(xapi.NormalizeTweetID(c.ID))
@@ -1046,7 +1039,7 @@ type FollowCmd struct {
 
 func (c *FollowCmd) Run(globals *Globals) error {
 	if c.Batch != "" {
-		return processUserBatch(globals, c.Batch, globals.Client.FollowUser, "follow")
+		return processUserBatch(c.Batch, globals.Client.FollowUser, "follow")
 	}
 
 	result, err := globals.Client.FollowUser(xapi.NormalizeScreenName(c.ScreenName))
@@ -1063,7 +1056,7 @@ type UnfollowCmd struct {
 
 func (c *UnfollowCmd) Run(globals *Globals) error {
 	if c.Batch != "" {
-		return processUserBatch(globals, c.Batch, globals.Client.UnfollowUser, "unfollow")
+		return processUserBatch(c.Batch, globals.Client.UnfollowUser, "unfollow")
 	}
 
 	result, err := globals.Client.UnfollowUser(xapi.NormalizeScreenName(c.ScreenName))
@@ -1073,7 +1066,7 @@ func (c *UnfollowCmd) Run(globals *Globals) error {
 	return globals.Printer("").PrintActionResult(result)
 }
 
-func processUserBatch(globals *Globals, filePath string, action func(string) (model.ActionResult, error), actionName string) error {
+func processUserBatch(filePath string, action func(string) (model.ActionResult, error), actionName string) error {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("read batch file: %w", err)
@@ -1119,7 +1112,7 @@ func processUserBatch(globals *Globals, filePath string, action func(string) (mo
 	return nil
 }
 
-func processBatch(globals *Globals, filePath string, action func(string) (model.ActionResult, error), actionName string) error {
+func processBatch(filePath string, action func(string) (model.ActionResult, error), actionName string) error {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("read batch file: %w", err)

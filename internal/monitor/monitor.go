@@ -302,7 +302,7 @@ func ParseDuration(s string) (time.Duration, error) {
 	}
 
 	var val int
-	fmt.Sscanf(value, "%d", &val)
+	_, _ = fmt.Sscanf(value, "%d", &val)
 
 	return time.Duration(val) * multiplier, nil
 }
@@ -346,7 +346,7 @@ func commandExists(name string) bool {
 func FormatMention(mention Mention) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("@%s: ", mention.Tweet.Author.ScreenName))
+	fmt.Fprintf(&sb, "@%s: ", mention.Tweet.Author.ScreenName)
 	sb.WriteString(truncateText(mention.Tweet.Text, 100))
 
 	if mention.IsNew {
@@ -354,7 +354,7 @@ func FormatMention(mention Mention) string {
 	}
 
 	if mention.MatchedBy != "" {
-		sb.WriteString(fmt.Sprintf(" (matched: %s)", mention.MatchedBy))
+		fmt.Fprintf(&sb, " (matched: %s)", mention.MatchedBy)
 	}
 
 	return sb.String()
@@ -363,8 +363,8 @@ func FormatMention(mention Mention) string {
 func FormatMentions(result MonitorResult) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("Mentions: %d total, %d new\n", result.TotalCount, result.NewCount))
-	sb.WriteString(fmt.Sprintf("Last checked: %s\n\n", result.LastChecked.Format("2006-01-02 15:04:05")))
+	fmt.Fprintf(&sb, "Mentions: %d total, %d new\n", result.TotalCount, result.NewCount)
+	fmt.Fprintf(&sb, "Last checked: %s\n\n", result.LastChecked.Format("2006-01-02 15:04:05"))
 
 	for _, mention := range result.Mentions {
 		sb.WriteString(FormatMention(mention))

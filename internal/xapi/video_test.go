@@ -190,7 +190,7 @@ func TestVideoUploadStateFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	stateFile := VideoUploadStateFile{
 		MediaID:        123456789,
@@ -392,11 +392,11 @@ func TestCleanupExpiredVideoStates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	oldHome := os.Getenv("HOME")
-	os.Setenv("HOME", tmpDir)
-	defer os.Setenv("HOME", oldHome)
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", oldHome) }()
 
 	stateDir := filepath.Join(tmpDir, ".config", "x", "video-uploads")
 	if err := os.MkdirAll(stateDir, 0700); err != nil {

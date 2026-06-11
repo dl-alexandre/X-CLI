@@ -30,7 +30,7 @@ func TestCleanDMText(t *testing.T) {
 func TestMessageSortKey(t *testing.T) {
 	withTime := model.DirectMessage{Text: "a", CreatedAt: "2026-01-01T00:00:00Z"}
 	withoutTime := model.DirectMessage{Text: "b"}
-	if !(messageSortKey(withTime) < messageSortKey(withoutTime)) {
+	if messageSortKey(withTime) >= messageSortKey(withoutTime) {
 		t.Fatal("expected timestamped message to sort before missing timestamp")
 	}
 }

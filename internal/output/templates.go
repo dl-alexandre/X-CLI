@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/dl-alexandre/X-CLI/internal/model"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type TemplateEngine struct {
@@ -26,7 +28,7 @@ type TemplateData struct {
 var builtInFuncs = template.FuncMap{
 	"upper":     strings.ToUpper,
 	"lower":     strings.ToLower,
-	"title":     strings.Title,
+	"title":     cases.Title(language.Und).String,
 	"trim":      strings.TrimSpace,
 	"truncate":  truncateStr,
 	"date":      formatDate,

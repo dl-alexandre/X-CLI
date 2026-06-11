@@ -97,17 +97,14 @@ func (h *RateLimitHandler) ShowCountdown(duration time.Duration, reason string) 
 	defer ticker.Stop()
 
 	start := time.Now()
-	for {
-		select {
-		case <-ticker.C:
-			elapsed := time.Since(start)
-			left := int((duration - elapsed).Seconds())
-			if left <= 0 {
-				fmt.Fprintf(os.Stderr, "\r%s Retrying now...     \n", reason)
-				return
-			}
-			fmt.Fprintf(os.Stderr, "\r%s Retrying in %ds...    ", reason, left)
+	for range ticker.C {
+		elapsed := time.Since(start)
+		left := int((duration - elapsed).Seconds())
+		if left <= 0 {
+			fmt.Fprintf(os.Stderr, "\r%s Retrying now...     \n", reason)
+			return
 		}
+		fmt.Fprintf(os.Stderr, "\r%s Retrying in %ds...    ", reason, left)
 	}
 }
 

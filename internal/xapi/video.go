@@ -173,7 +173,7 @@ func (c *Client) UploadVideo(filePath string, progressCB ProgressCallback) (*Med
 		}, nil
 	}
 
-	_, err = uploader.initUpload(filePath, info.Size(), mimeType)
+	_, err = uploader.initUpload(info.Size(), mimeType)
 	if err != nil {
 		return nil, fmt.Errorf("init upload: %w", err)
 	}
@@ -256,7 +256,7 @@ func (u *VideoUploader) saveState() error {
 	return os.WriteFile(u.stateFilePath, data, 0600)
 }
 
-func (u *VideoUploader) initUpload(filePath string, fileSize int64, mimeType string) (*VideoUploadInitResult, error) {
+func (u *VideoUploader) initUpload(fileSize int64, mimeType string) (*VideoUploadInitResult, error) {
 	if u.stateFile.State == VideoStateInit || u.stateFile.State == VideoStateUploading {
 		if u.stateFile.MediaIDString != "" {
 			return &VideoUploadInitResult{
@@ -302,7 +302,7 @@ func (u *VideoUploader) uploadChunks(filePath string, fileSize int64) error {
 	if err != nil {
 		return fmt.Errorf("open file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	startChunk := u.stateFile.UploadedChunks
 	if startChunk > 0 {
@@ -538,7 +538,7 @@ func (c *Client) doVideoUploadRequest(form urlValues, mediaData []byte) ([]byte,
 	if err != nil {
 		return nil, fmt.Errorf("upload request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -573,21 +573,21 @@ func (w *multipartWriter) WriteField(name, value string) error {
 	if value == "" {
 		return nil
 	}
-	fmt.Fprintf(w, "--%s\r\n", w.boundary)
-	fmt.Fprintf(w, "Content-Disposition: form-data; name=\"%s\"\r\n\r\n", name)
-	fmt.Fprintf(w, "%s\r\n", value)
+	_, _ = fmt.Fprintf(w, "--%s\r\n", w.boundary)
+	_, _ = fmt.Fprintf(w, "Content-Disposition: form-data; name=\"%s\"\r\n\r\n", name)
+	_, _ = fmt.Fprintf(w, "%s\r\n", value)
 	return nil
 }
 
 func (w *multipartWriter) CreateFormFile(name, filename string) io.Writer {
-	fmt.Fprintf(w, "--%s\r\n", w.boundary)
-	fmt.Fprintf(w, "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n", name, filename)
-	fmt.Fprintf(w, "Content-Type: application/octet-stream\r\n\r\n")
+	_, _ = fmt.Fprintf(w, "--%s\r\n", w.boundary)
+	_, _ = fmt.Fprintf(w, "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n", name, filename)
+	_, _ = fmt.Fprintf(w, "Content-Type: application/octet-stream\r\n\r\n")
 	return w
 }
 
 func (w *multipartWriter) Close() error {
-	fmt.Fprintf(w, "--%s--\r\n", w.boundary)
+	_, _ = fmt.Fprintf(w, "--%s--\r\n", w.boundary)
 	return nil
 }
 
@@ -668,7 +668,7 @@ func CleanupExpiredVideoStates() error {
 		}
 
 		if !state.ExpiresAt.IsZero() && time.Now().After(state.ExpiresAt) {
-			os.Remove(path)
+			_ = os.Remove(path)
 		}
 	}
 
@@ -728,11 +728,11 @@ func ParseVideoMetadata(filePath string) (*VideoMetadata, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	buf := make([]byte, 1024)
 	n, err := file.Read(buf)
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
 	}
 

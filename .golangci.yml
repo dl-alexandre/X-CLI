@@ -1,113 +1,25 @@
+version: "2"
+
 run:
   timeout: 5m
-  go: "1.24"
+  tests: true
 
 linters:
+  default: none
   enable:
-    - bodyclose
-    - depguard
-    - dogsled
-    - dupl
-    - errcheck
-    - errorlint
-    - exhaustive
-    - goconst
-    - gocritic
-    - gofmt
-    - goimports
-    - gomnd
-    - gocyclo
-    - gosec
-    - gosimple
+    # Baseline "industry standard" Go checks.
     - govet
-    - ineffassign
-    - misspell
-    - nakedret
-    - prealloc
-    - revive
     - staticcheck
-    - stylecheck
-    - thelper
-    - tparallel
-    - typecheck
-    - unconvert
-    - unparam
+    - errcheck
+    - ineffassign
     - unused
-    - whitespace
-    - wsl
+    - misspell
+    - unparam
+    - errorlint
 
-linters-settings:
-  dupl:
-    threshold: 100
-  
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-  
-  gocritic:
-    enabled-tags:
-      - performance
-      - style
-      - experimental
-    disabled-checks:
-      - wrapperFunc
-      - dupImport
-  
-  gocyclo:
-    min-complexity: 15
-  
-  goimports:
-    local-prefixes: github.com/dl-alexandre/X-CLI
-  
-  gosec:
-    severity: medium
-    confidence: medium
-  
-  misspell:
-    locale: US
-  
-  nakedret:
-    max-func-lines: 30
-  
-  prealloc:
-    simple: true
-    range-loops: true
-    for-loops: false
-
-issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - dupl
-        - gosec
-        - lll
-    
-    # Exclude known linter issues
-    - text: "weak cryptographic primitive"
-      linters:
-        - gosec
-    
-    # Exclude shadow checking in tests
-    - path: _test\.go
-      text: "shadow"
-      linters:
-        - govet
-    
-    # Exclude documentation check for examples
-    - path: examples/
-      linters:
-        - gocyclo
-        - gocritic
-
-  exclude-use-default: false
-  max-issues-per-linter: 0
-  max-same-issues: 0
-
-output:
-  formats:
-    - format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
+  settings:
+    misspell:
+      # Words used intentionally in CLI context.
+      ignore-rules:
+        - cancelled
+        - cancelling

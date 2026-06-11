@@ -83,9 +83,7 @@ func (f *OAuthFlow) Start() (*OAuthToken, error) {
 		return nil, err
 	}
 
-	if err := f.startCallbackServer(); err != nil {
-		return nil, fmt.Errorf("start callback server: %w", err)
-	}
+	f.startCallbackServer()
 
 	authURL := f.buildAuthURL(pkce)
 
@@ -117,7 +115,7 @@ func (f *OAuthFlow) Start() (*OAuthToken, error) {
 	}
 }
 
-func (f *OAuthFlow) startCallbackServer() error {
+func (f *OAuthFlow) startCallbackServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", f.handleCallback)
 
@@ -133,7 +131,6 @@ func (f *OAuthFlow) startCallbackServer() error {
 	}()
 
 	time.Sleep(100 * time.Millisecond)
-	return nil
 }
 
 func (f *OAuthFlow) handleCallback(w http.ResponseWriter, r *http.Request) {
@@ -201,7 +198,7 @@ func (f *OAuthFlow) exchangeCodeForToken(code string) (*OAuthToken, error) {
 	if err != nil {
 		return nil, fmt.Errorf("token request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -253,7 +250,7 @@ func RefreshOAuthToken(refreshToken string) (*OAuthToken, error) {
 	if err != nil {
 		return nil, fmt.Errorf("refresh request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

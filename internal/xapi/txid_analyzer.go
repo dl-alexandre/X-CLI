@@ -48,7 +48,7 @@ func AnalyzeTXIDTrace(filePath string, operationFilter string) (txIDAnalysis, er
 	if err != nil {
 		return txIDAnalysis{}, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	analysis := txIDAnalysis{MinEncodedLength: math.MaxInt, MinDecodedLength: math.MaxInt, OperationFilter: strings.TrimSpace(operationFilter)}
 	counts := map[string]int{}
@@ -351,7 +351,7 @@ func ExtractSalts(filePath string) ([]model.SaltSample, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var samples []model.SaltSample
 	seen := map[string]bool{}

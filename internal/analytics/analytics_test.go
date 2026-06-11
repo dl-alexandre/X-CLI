@@ -43,11 +43,11 @@ func createTestTweet(id, screenName, text string, likes, retweets, replies int) 
 	}
 }
 
-func createTestUserProfile(screenName string, followers int) model.UserProfile {
+func createTestUserProfile(followers int) model.UserProfile {
 	return model.UserProfile{
 		ID:             "user123",
 		Name:           "Test User",
-		ScreenName:     screenName,
+		ScreenName:     "testuser",
 		FollowersCount: followers,
 		FollowingCount: 100,
 		TweetsCount:    500,
@@ -91,7 +91,7 @@ func TestRecordTweet(t *testing.T) {
 func TestRecordUserSnapshot(t *testing.T) {
 	collector := createTestCollector(t)
 
-	user := createTestUserProfile("testuser", 1000)
+	user := createTestUserProfile(1000)
 
 	if err := collector.RecordUserSnapshot(user); err != nil {
 		t.Fatalf("RecordUserSnapshot failed: %v", err)
@@ -113,9 +113,9 @@ func TestRecordUserSnapshot(t *testing.T) {
 func TestFollowerGrowthTracking(t *testing.T) {
 	collector := createTestCollector(t)
 
-	user1 := createTestUserProfile("testuser", 1000)
-	user2 := createTestUserProfile("testuser", 1050)
-	user3 := createTestUserProfile("testuser", 1120)
+	user1 := createTestUserProfile(1000)
+	user2 := createTestUserProfile(1050)
+	user3 := createTestUserProfile(1120)
 
 	if err := collector.RecordUserSnapshot(user1); err != nil {
 		t.Fatalf("RecordUserSnapshot 1 failed: %v", err)
@@ -312,7 +312,7 @@ func TestExportToJSON(t *testing.T) {
 		t.Fatalf("RecordTweet failed: %v", err)
 	}
 
-	user := createTestUserProfile("testuser", 1000)
+	user := createTestUserProfile(1000)
 	if err := collector.RecordUserSnapshot(user); err != nil {
 		t.Fatalf("RecordUserSnapshot failed: %v", err)
 	}
@@ -391,7 +391,7 @@ func TestPersistence(t *testing.T) {
 		t.Fatalf("RecordTweet failed: %v", err)
 	}
 
-	user := createTestUserProfile("testuser", 1000)
+	user := createTestUserProfile(1000)
 	if err := collector1.RecordUserSnapshot(user); err != nil {
 		t.Fatalf("RecordUserSnapshot failed: %v", err)
 	}

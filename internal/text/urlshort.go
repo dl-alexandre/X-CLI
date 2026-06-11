@@ -114,7 +114,7 @@ func (s *URLShortener) shortenWithTinyURL(ctx context.Context, originalURL strin
 	if err != nil {
 		return "", fmt.Errorf("tinyurl request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("tinyurl returned status %d", resp.StatusCode)
@@ -145,7 +145,7 @@ func (s *URLShortener) shortenWithIsGd(ctx context.Context, originalURL string) 
 	if err != nil {
 		return "", fmt.Errorf("is.gd request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("is.gd returned status %d", resp.StatusCode)
@@ -176,7 +176,7 @@ func (s *URLShortener) shortenWithVGd(ctx context.Context, originalURL string) (
 	if err != nil {
 		return "", fmt.Errorf("v.gd request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("v.gd returned status %d", resp.StatusCode)
@@ -211,7 +211,7 @@ func (s *URLShortener) shortenWithCustom(ctx context.Context, originalURL string
 	if err != nil {
 		return "", fmt.Errorf("custom shortener request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("custom shortener returned status %d", resp.StatusCode)
