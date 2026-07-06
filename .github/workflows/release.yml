@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release (re-run GoReleaser)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -17,34 +23,28 @@ jobs:
       uses: actions/checkout@v7
       with:
         fetch-depth: 0
+        ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
     
     - name: Set up Go
       uses: actions/setup-go@v6
       with:
-        go-version-file: go.mod
+        go-version-file: 'go.mod'
+    
     - name: Cache Go modules
-      uses: actions/cache@v6
+      uses: actions/cache@v7
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
     
-    - name: Install GoReleaser
-      uses: goreleaser/goreleaser-action@v7
-      with:
-        install-only: true
-    
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v7
       with:
         distribution: goreleaser
-        version: latest
+        version: '~> v2'
         args: release --clean
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Optional: Add HOMEBREW_TAP_TOKEN secret to auto-update homebrew formula
-        # Generate a PAT with 'repo' scope at: https://github.com/settings/tokens
         HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        # Optional: Add SCOOP_BUCKET_TOKEN secret to auto-update scoop manifest  
         SCOOP_BUCKET_TOKEN: ${{ secrets.SCOOP_BUCKET_TOKEN }}
