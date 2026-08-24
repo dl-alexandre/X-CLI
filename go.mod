@@ -3,7 +3,7 @@ module github.com/dl-alexandre/X-CLI
 go 1.26.0
 
 require (
-	github.com/alecthomas/kong v1.15.0
+	github.com/alecthomas/kong v1.16.1
 	github.com/chromedp/cdproto v0.0.0-20260427013145-5737772c319b
 	github.com/chromedp/chromedp v0.15.1
 	github.com/dl-alexandre/cli-tools v0.0.1
