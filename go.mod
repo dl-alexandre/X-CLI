@@ -7,7 +7,7 @@ require (
 	github.com/chromedp/cdproto v0.0.0-20260714215040-dc233986426f
 	github.com/chromedp/chromedp v0.16.0
 	github.com/dl-alexandre/cli-tools v0.0.1
-	github.com/jotaen/kong-completion v0.0.14
+	github.com/jotaen/kong-completion v0.0.15
 	github.com/mattn/go-isatty v0.0.24
 	github.com/refraction-networking/utls v1.8.2
 	github.com/rodaine/table v1.3.1
