@@ -10,7 +10,7 @@ require (
 	github.com/jotaen/kong-completion v0.0.15
 	github.com/mattn/go-isatty v0.0.24
 	github.com/refraction-networking/utls v1.8.2
-	github.com/rodaine/table v1.3.1
+	github.com/rodaine/table v1.4.1
 	github.com/spf13/viper v1.21.0
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/text v0.41.0
@@ -32,7 +32,6 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/klauspost/compress v1.18.6 // indirect
 	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728 // indirect
-	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/orisano/pixelmatch v0.0.0-20230914042517-fa304d1dc785 // indirect
 	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
 	github.com/posener/complete v1.2.3 // indirect
@@ -45,8 +44,7 @@ require (
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/xyproto/randomstring v1.2.0 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )
