@@ -1,14 +1,12 @@
 package xapi
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/dl-alexandre/X-CLI/internal/model"
 )
@@ -37,14 +35,14 @@ func (c *Client) SpaceDetails(spaceID string) (model.Space, error) {
 		URL         string `json:"url"`
 	}
 
-	err = chromedp.Run(session.ctx,
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error { return setBrowserCookies(ctx, c.authSession.Cookies) }),
+	err = chromedp.Do(session.ctx,
+		enableNetwork(),
+		setCookies(c.authSession.Cookies),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(2*time.Second),
 		chromedp.Navigate(pageURL),
 		chromedp.Sleep(3*time.Second),
-		chromedp.Evaluate(`(() => {
+		evaluateInto(`(() => {
 			const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 			const textNodes = Array.from(document.querySelectorAll('main h1, main h2, main span, main div[dir="auto"], main time'))
 				.map((node) => clean(node.innerText || node.getAttribute('datetime') || ''))

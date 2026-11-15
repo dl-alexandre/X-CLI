@@ -1,7 +1,6 @@
 package xapi
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -9,8 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chromedp/cdproto/network"
-	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 )
 
@@ -180,32 +177,24 @@ func (c *Client) CaptureWebOperations(opts WebCaptureOptions) (WebCaptureResult,
 	}
 	defer session.Close()
 
-	err = chromedp.Run(session.ctx,
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			_, err := page.AddScriptToEvaluateOnNewDocument(webOperationCaptureScript).Do(ctx)
-			return err
-		}),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			return setBrowserCookies(ctx, c.authSession.Cookies)
-		}),
+	err = chromedp.Do(session.ctx,
+		enableNetwork(),
+		addScriptOnNewDocument(webOperationCaptureScript),
+		setCookies(c.authSession.Cookies),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(2*time.Second),
-		chromedp.Evaluate(webOperationCaptureScript, nil),
+		runScript(webOperationCaptureScript),
 		chromedp.Navigate(opts.URL),
 		chromedp.Sleep(2*time.Second),
-		chromedp.ActionFunc(func(context.Context) error {
-			time.Sleep(opts.Duration)
-			return nil
-		}),
+		chromedp.Sleep(opts.Duration),
 	)
 	if err != nil {
 		return WebCaptureResult{}, err
 	}
 
 	var rawRecords []map[string]any
-	if err := chromedp.Run(session.ctx,
-		chromedp.Evaluate(`(() => window.__xcliWebOps || [])()`, &rawRecords),
+	if err := chromedp.Do(session.ctx,
+		evaluateInto(`(() => window.__xcliWebOps || [])()`, &rawRecords),
 	); err != nil {
 		return WebCaptureResult{}, err
 	}
