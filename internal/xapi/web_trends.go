@@ -1,12 +1,10 @@
 package xapi
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/dl-alexandre/X-CLI/internal/model"
 )
@@ -32,14 +30,14 @@ func (c *Client) Trends(count int) ([]model.Trend, error) {
 		URL      string `json:"url"`
 	}
 
-	err = chromedp.Run(session.ctx,
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error { return setBrowserCookies(ctx, c.authSession.Cookies) }),
+	err = chromedp.Do(session.ctx,
+		enableNetwork(),
+		setCookies(c.authSession.Cookies),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(2*time.Second),
 		chromedp.Navigate("https://x.com/explore/tabs/trending"),
 		chromedp.Sleep(4*time.Second),
-		chromedp.Evaluate(`(() => {
+		evaluateInto(`(() => {
 			const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 			const items = [];
 			const seen = new Set();

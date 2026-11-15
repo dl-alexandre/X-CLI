@@ -38,7 +38,7 @@ func BrowserLogin() (*Session, error) {
 
 	// Navigate to X home page
 	fmt.Println("Opening Chrome...")
-	if err := chromedp.Run(browserCtx, chromedp.Navigate("https://x.com/home")); err != nil {
+	if err := chromedp.Do(browserCtx, chromedp.Navigate("https://x.com/home")); err != nil {
 		return nil, fmt.Errorf("open Chrome: %w", err)
 	}
 
@@ -59,8 +59,8 @@ func BrowserLogin() (*Session, error) {
 	fmt.Println("Reading cookies from Chrome...")
 
 	// Get cookies
-	var cookieStr string
-	if err := chromedp.Run(browserCtx, chromedp.Evaluate(`document.cookie`, &cookieStr)); err != nil {
+	cookieStr, err := chromedp.Run(browserCtx, chromedp.Evaluate[string](`document.cookie`))
+	if err != nil {
 		cancelBrowser()
 		cancelAlloc()
 		return nil, fmt.Errorf("read cookies: %w", err)
