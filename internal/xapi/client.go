@@ -19,9 +19,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/network"
-	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/remote"
 	"github.com/dl-alexandre/X-CLI/internal/auth"
 	"github.com/dl-alexandre/X-CLI/internal/config"
 	"github.com/dl-alexandre/X-CLI/internal/model"
@@ -333,15 +334,11 @@ func (c *Client) Feed(feedType string, count int) (model.TimelineResult, error) 
 		return c.browserTimeline("https://x.com/home", count, nil, "feed")
 	}
 
-	return c.browserTimeline("https://x.com/home", count, func(ctx context.Context) error {
-		if err := chromedp.WaitVisible(`article`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`//span[text()="Following"]`, chromedp.BySearch).Do(ctx); err != nil {
-			return err
-		}
-		return chromedp.Sleep(2 * time.Second).Do(ctx)
-	}, "feed")
+	return c.browserTimeline("https://x.com/home", count, chromedp.Steps(
+		chromedp.WaitVisible(chromedp.CSS(`article`)),
+		chromedp.Click(chromedp.Search(`//span[text()="Following"]`)),
+		chromedp.Sleep(2*time.Second),
+	), "feed")
 }
 
 func (c *Client) Favorites(count int) (model.TimelineResult, error) {
@@ -527,27 +524,15 @@ func (c *Client) CreatePost(text string) (model.ActionResult, error) {
 	}
 
 	var profileURL string
-	mutation, err := c.runBrowserMutation("CreateTweet", func(ctx context.Context) error {
-		if err := chromedp.Navigate("https://x.com/home").Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="tweetTextarea_0"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.AttributeValue(`[data-testid="AppTabBar_Profile_Link"]`, "href", &profileURL, nil, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.SendKeys(`[data-testid="tweetTextarea_0"]`, text, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1200 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="tweetButtonInline"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		return chromedp.Sleep(3 * time.Second).Do(ctx)
-	})
+	mutation, err := c.runBrowserMutation("CreateTweet", chromedp.Steps(
+		chromedp.Navigate("https://x.com/home"),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="tweetTextarea_0"]`)),
+		profileHrefInto(&profileURL),
+		chromedp.SendKeys(chromedp.CSS(`[data-testid="tweetTextarea_0"]`), text),
+		chromedp.Sleep(1200*time.Millisecond),
+		chromedp.Click(chromedp.CSS(`[data-testid="tweetButtonInline"]`)),
+		chromedp.Sleep(3*time.Second),
+	))
 	if err != nil {
 		return model.ActionResult{}, err
 	}
@@ -634,27 +619,15 @@ func (c *Client) CreateThread(textContent string) ([]model.ActionResult, error) 
 
 func (c *Client) createReply(text string, replyToID string) (model.ActionResult, error) {
 	var profileURL string
-	mutation, err := c.runBrowserMutation("CreateTweet", func(ctx context.Context) error {
-		if err := chromedp.Navigate(tweetURL(replyToID)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="tweetTextarea_0"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.AttributeValue(`[data-testid="AppTabBar_Profile_Link"]`, "href", &profileURL, nil, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.SendKeys(`[data-testid="tweetTextarea_0"]`, text, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1200 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="tweetButtonInline"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		return chromedp.Sleep(3 * time.Second).Do(ctx)
-	})
+	mutation, err := c.runBrowserMutation("CreateTweet", chromedp.Steps(
+		chromedp.Navigate(tweetURL(replyToID)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="tweetTextarea_0"]`)),
+		profileHrefInto(&profileURL),
+		chromedp.SendKeys(chromedp.CSS(`[data-testid="tweetTextarea_0"]`), text),
+		chromedp.Sleep(1200*time.Millisecond),
+		chromedp.Click(chromedp.CSS(`[data-testid="tweetButtonInline"]`)),
+		chromedp.Sleep(3*time.Second),
+	))
 	if err != nil {
 		return model.ActionResult{}, err
 	}
@@ -701,30 +674,16 @@ func extractTweetIDFromURL(urlStr string) string {
 }
 
 func (c *Client) DeletePost(id string) (model.ActionResult, error) {
-	mutation, err := c.runBrowserMutation("DeleteTweet", func(ctx context.Context) error {
-		if err := chromedp.Navigate(tweetURL(id)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="caret"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="caret"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`//span[text()="Delete"]`, chromedp.BySearch).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`//span[text()="Delete"]`, chromedp.BySearch).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="confirmationSheetConfirm"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="confirmationSheetConfirm"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		return chromedp.Sleep(2 * time.Second).Do(ctx)
-	})
+	mutation, err := c.runBrowserMutation("DeleteTweet", chromedp.Steps(
+		chromedp.Navigate(tweetURL(id)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="caret"]`)),
+		chromedp.Click(chromedp.CSS(`[data-testid="caret"]`)),
+		chromedp.WaitVisible(chromedp.Search(`//span[text()="Delete"]`)),
+		chromedp.Click(chromedp.Search(`//span[text()="Delete"]`)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="confirmationSheetConfirm"]`)),
+		chromedp.Click(chromedp.CSS(`[data-testid="confirmationSheetConfirm"]`)),
+		chromedp.Sleep(2*time.Second),
+	))
 	if err != nil {
 		return model.ActionResult{}, err
 	}
@@ -740,42 +699,20 @@ func (c *Client) CreateQuotePost(id string, text string) (model.ActionResult, er
 	}
 
 	var profileURL string
-	mutation, err := c.runBrowserMutation("CreateTweet", func(ctx context.Context) error {
-		if err := chromedp.Navigate(tweetURL(id)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="retweet"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="retweet"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`//span[text()="Quote"]`, chromedp.BySearch).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`//span[text()="Quote"]`, chromedp.BySearch).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="tweetTextarea_0"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.AttributeValue(`[data-testid="AppTabBar_Profile_Link"]`, "href", &profileURL, nil, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.SendKeys(`[data-testid="tweetTextarea_0"]`, text, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1200 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="tweetButtonInline"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		return chromedp.Sleep(3 * time.Second).Do(ctx)
-	})
+	mutation, err := c.runBrowserMutation("CreateTweet", chromedp.Steps(
+		chromedp.Navigate(tweetURL(id)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="retweet"]`)),
+		chromedp.Click(chromedp.CSS(`[data-testid="retweet"]`)),
+		chromedp.Sleep(500*time.Millisecond),
+		chromedp.WaitVisible(chromedp.Search(`//span[text()="Quote"]`)),
+		chromedp.Click(chromedp.Search(`//span[text()="Quote"]`)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="tweetTextarea_0"]`)),
+		profileHrefInto(&profileURL),
+		chromedp.SendKeys(chromedp.CSS(`[data-testid="tweetTextarea_0"]`), text),
+		chromedp.Sleep(1200*time.Millisecond),
+		chromedp.Click(chromedp.CSS(`[data-testid="tweetButtonInline"]`)),
+		chromedp.Sleep(3*time.Second),
+	))
 	if err != nil {
 		return model.ActionResult{}, err
 	}
@@ -829,33 +766,17 @@ func (c *Client) UnlikePost(id string) (model.ActionResult, error) {
 }
 
 func (c *Client) RetweetPost(id string) (model.ActionResult, error) {
-	err := c.runBrowserFlow(func(ctx context.Context) error {
-		if err := chromedp.Navigate(tweetURL(id)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="retweet"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="retweet"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="retweetConfirm"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="retweetConfirm"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Navigate(tweetURL(id)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		return chromedp.WaitVisible(`[data-testid="unretweet"]`, chromedp.ByQuery).Do(ctx)
-	})
+	err := c.runBrowserFlow(chromedp.Steps(
+		chromedp.Navigate(tweetURL(id)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="retweet"]`)),
+		chromedp.Click(chromedp.CSS(`[data-testid="retweet"]`)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="retweetConfirm"]`)),
+		chromedp.Click(chromedp.CSS(`[data-testid="retweetConfirm"]`)),
+		chromedp.Sleep(1500*time.Millisecond),
+		chromedp.Navigate(tweetURL(id)),
+		chromedp.Sleep(1500*time.Millisecond),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="unretweet"]`)),
+	))
 	if err != nil {
 		return model.ActionResult{}, err
 	}
@@ -863,33 +784,17 @@ func (c *Client) RetweetPost(id string) (model.ActionResult, error) {
 }
 
 func (c *Client) UnretweetPost(id string) (model.ActionResult, error) {
-	err := c.runBrowserFlow(func(ctx context.Context) error {
-		if err := chromedp.Navigate(tweetURL(id)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="unretweet"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="unretweet"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="unretweetConfirm"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="unretweetConfirm"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Navigate(tweetURL(id)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		return chromedp.WaitVisible(`[data-testid="retweet"]`, chromedp.ByQuery).Do(ctx)
-	})
+	err := c.runBrowserFlow(chromedp.Steps(
+		chromedp.Navigate(tweetURL(id)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="unretweet"]`)),
+		chromedp.Click(chromedp.CSS(`[data-testid="unretweet"]`)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="unretweetConfirm"]`)),
+		chromedp.Click(chromedp.CSS(`[data-testid="unretweetConfirm"]`)),
+		chromedp.Sleep(1500*time.Millisecond),
+		chromedp.Navigate(tweetURL(id)),
+		chromedp.Sleep(1500*time.Millisecond),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="retweet"]`)),
+	))
 	if err != nil {
 		return model.ActionResult{}, err
 	}
@@ -897,34 +802,22 @@ func (c *Client) UnretweetPost(id string) (model.ActionResult, error) {
 }
 
 func (c *Client) BookmarkPost(id string) (model.ActionResult, error) {
-	err := c.runBrowserFlow(func(ctx context.Context) error {
-		if err := chromedp.Navigate(tweetURL(id)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="bookmark"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="bookmark"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Navigate("https://x.com/i/bookmarks").Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(2500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		var exists bool
-		if err := chromedp.Evaluate(fmt.Sprintf(`document.querySelector('a[href*="/status/%s"]') !== null`, id), &exists).Do(ctx); err != nil {
-			return err
-		}
-		if !exists {
-			return errors.New("bookmark was not confirmed by X")
-		}
-		return nil
-	})
+	var exists bool
+	err := c.runBrowserFlow(chromedp.Steps(
+		chromedp.Navigate(tweetURL(id)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="bookmark"]`)),
+		chromedp.Click(chromedp.CSS(`[data-testid="bookmark"]`)),
+		chromedp.Sleep(1500*time.Millisecond),
+		chromedp.Navigate("https://x.com/i/bookmarks"),
+		chromedp.Sleep(2500*time.Millisecond),
+		evaluateInto(fmt.Sprintf(`document.querySelector('a[href*="/status/%s"]') !== null`, id), &exists),
+		chromedp.Func(func(context.Context, *chromedp.Target) error {
+			if !exists {
+				return errors.New("bookmark was not confirmed by X")
+			}
+			return nil
+		}),
+	))
 	if err != nil {
 		return model.ActionResult{}, err
 	}
@@ -932,34 +825,22 @@ func (c *Client) BookmarkPost(id string) (model.ActionResult, error) {
 }
 
 func (c *Client) UnbookmarkPost(id string) (model.ActionResult, error) {
-	err := c.runBrowserFlow(func(ctx context.Context) error {
-		if err := chromedp.Navigate(tweetURL(id)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="removeBookmark"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(`[data-testid="removeBookmark"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Navigate("https://x.com/i/bookmarks").Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(2500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		var exists bool
-		if err := chromedp.Evaluate(fmt.Sprintf(`document.querySelector('a[href*="/status/%s"]') !== null`, id), &exists).Do(ctx); err != nil {
-			return err
-		}
-		if exists {
-			return errors.New("bookmark removal was not confirmed by X")
-		}
-		return nil
-	})
+	var exists bool
+	err := c.runBrowserFlow(chromedp.Steps(
+		chromedp.Navigate(tweetURL(id)),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="removeBookmark"]`)),
+		chromedp.Click(chromedp.CSS(`[data-testid="removeBookmark"]`)),
+		chromedp.Sleep(1500*time.Millisecond),
+		chromedp.Navigate("https://x.com/i/bookmarks"),
+		chromedp.Sleep(2500*time.Millisecond),
+		evaluateInto(fmt.Sprintf(`document.querySelector('a[href*="/status/%s"]') !== null`, id), &exists),
+		chromedp.Func(func(context.Context, *chromedp.Target) error {
+			if exists {
+				return errors.New("bookmark removal was not confirmed by X")
+			}
+			return nil
+		}),
+	))
 	if err != nil {
 		return model.ActionResult{}, err
 	}
@@ -975,21 +856,13 @@ func (c *Client) UnfollowUser(screenName string) (model.ActionResult, error) {
 }
 
 func (c *Client) browserUserAction(screenName string, selector string, expectedAfter string, action string, message string) (model.ActionResult, error) {
-	err := c.runBrowserFlow(func(ctx context.Context) error {
-		if err := chromedp.Navigate("https://x.com/" + url.PathEscape(screenName)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(selector, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(selector, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		return chromedp.WaitVisible(expectedAfter, chromedp.ByQuery).Do(ctx)
-	})
+	err := c.runBrowserFlow(chromedp.Steps(
+		chromedp.Navigate("https://x.com/"+url.PathEscape(screenName)),
+		chromedp.WaitVisible(chromedp.CSS(selector)),
+		chromedp.Click(chromedp.CSS(selector)),
+		chromedp.Sleep(1500*time.Millisecond),
+		chromedp.WaitVisible(chromedp.CSS(expectedAfter)),
+	))
 	if err != nil {
 		return model.ActionResult{}, err
 	}
@@ -1722,28 +1595,22 @@ const txidInterceptorScript = `(function() {
   };
 })();`
 
-func (c *Client) runBrowserMutation(operation string, flow func(context.Context) error) (browserMutationResult, error) {
+func (c *Client) runBrowserMutation(operation string, flow browserStep) (browserMutationResult, error) {
 	session, err := c.newBrowserSession(75 * time.Second)
 	if err != nil {
 		return browserMutationResult{}, err
 	}
 	defer session.Close()
 
-	err = chromedp.Run(session.ctx,
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			_, err := page.AddScriptToEvaluateOnNewDocument(mutationInterceptorScript).Do(ctx)
-			return err
-		}),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			_, err := page.AddScriptToEvaluateOnNewDocument(txidInterceptorScript).Do(ctx)
-			return err
-		}),
+	err = chromedp.Do(session.ctx,
+		enableNetwork(),
+		addScriptOnNewDocument(mutationInterceptorScript),
+		addScriptOnNewDocument(txidInterceptorScript),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(4*time.Second),
-		chromedp.Evaluate(mutationInterceptorScript, nil),
-		chromedp.Evaluate(txidInterceptorScript, nil),
-		chromedp.ActionFunc(flow),
+		runScript(mutationInterceptorScript),
+		runScript(txidInterceptorScript),
+		flow,
 	)
 	if err != nil {
 		return browserMutationResult{}, err
@@ -1752,8 +1619,8 @@ func (c *Client) runBrowserMutation(operation string, flow func(context.Context)
 
 	var rawRecords []map[string]any
 	for i := 0; i < 16; i++ {
-		err = chromedp.Run(session.ctx,
-			chromedp.Evaluate(fmt.Sprintf(`(() => (window.__xcliMutations || []).filter((m) => (m.url || '').includes('/%s')) )()`, operation), &rawRecords),
+		err = chromedp.Do(session.ctx,
+			evaluateInto(fmt.Sprintf(`(() => (window.__xcliMutations || []).filter((m) => (m.url || '').includes('/%s')) )()`, operation), &rawRecords),
 		)
 		if err != nil {
 			return browserMutationResult{}, err
@@ -1787,23 +1654,20 @@ func (c *Client) runBrowserMutation(operation string, flow func(context.Context)
 	return result, nil
 }
 
-func (c *Client) runBrowserFlow(flow func(context.Context) error) error {
+func (c *Client) runBrowserFlow(flow browserStep) error {
 	session, err := c.newBrowserSession(60 * time.Second)
 	if err != nil {
 		return err
 	}
 	defer session.Close()
 
-	err = chromedp.Run(session.ctx,
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			_, err := page.AddScriptToEvaluateOnNewDocument(txidInterceptorScript).Do(ctx)
-			return err
-		}),
+	err = chromedp.Do(session.ctx,
+		enableNetwork(),
+		addScriptOnNewDocument(txidInterceptorScript),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(4*time.Second),
-		chromedp.Evaluate(txidInterceptorScript, nil),
-		chromedp.ActionFunc(flow),
+		runScript(txidInterceptorScript),
+		flow,
 	)
 	if err != nil {
 		return err
@@ -1814,9 +1678,8 @@ func (c *Client) runBrowserFlow(flow func(context.Context) error) error {
 func (c *Client) newBrowserSession(timeout time.Duration) (*browserSession, error) {
 	if wsURL, err := c.remoteDebugWebSocketURL(); err == nil && wsURL != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		allocCtx, allocCancel := chromedp.NewRemoteAllocator(ctx, wsURL)
-		browserCtx, browserCancel := chromedp.NewContext(allocCtx)
-		c.attachTraceListener(browserCtx, "remote-debug")
+		allocCtx, allocCancel := remote.NewAllocator(ctx, wsURL)
+		browserCtx, browserCancel := chromedp.NewContext(allocCtx, c.traceContextOptions("remote-debug")...)
 		return &browserSession{
 			ctx:    browserCtx,
 			cancel: cancel,
@@ -1842,8 +1705,7 @@ func (c *Client) newBrowserSession(timeout time.Duration) (*browserSession, erro
 		chromedp.Flag("no-first-run", true),
 		chromedp.Flag("no-default-browser-check", true),
 	)...)
-	browserCtx, browserCancel := chromedp.NewContext(allocCtx)
-	c.attachTraceListener(browserCtx, "cloned-profile")
+	browserCtx, browserCancel := chromedp.NewContext(allocCtx, c.traceContextOptions("cloned-profile")...)
 
 	return &browserSession{
 		ctx:    browserCtx,
@@ -1856,12 +1718,16 @@ func (c *Client) newBrowserSession(timeout time.Duration) (*browserSession, erro
 	}, nil
 }
 
-func (c *Client) attachTraceListener(browserCtx context.Context, source string) {
+// traceContextOptions returns the context options that record the request
+// headers of the tab in the txid trace. The listener is installed with
+// chromedp.WithListener, so it sees the events from the start of the tab, as
+// the old ListenTarget did when it ran before the first action.
+func (c *Client) traceContextOptions(source string) []chromedp.ContextOption {
 	if c.traceWriter == nil || !c.traceWriter.Enabled() {
-		return
+		return nil
 	}
 	requestMeta := map[network.RequestID]txIDTraceMeta{}
-	chromedp.ListenTarget(browserCtx, func(ev any) {
+	return []chromedp.ContextOption{chromedp.WithListener(func(ev any) {
 		switch e := ev.(type) {
 		case *network.EventRequestWillBeSent:
 			if e.Request == nil {
@@ -1871,13 +1737,13 @@ func (c *Client) attachTraceListener(browserCtx context.Context, source string) 
 				URL:         e.Request.URL,
 				Method:      e.Request.Method,
 				TimestampMS: time.Now().UnixMilli(),
-				WallTime:    fmt.Sprint(e.WallTime),
+				WallTime:    formatWallTime(e.WallTime),
 			}
 		case *network.EventRequestWillBeSentExtraInfo:
 			meta := requestMeta[e.RequestID]
 			_ = c.traceWriter.Record(meta, e.Headers, source)
 		}
-	})
+	})}
 }
 
 func (c *Client) remoteDebugWebSocketURL() (string, error) {
@@ -1933,8 +1799,8 @@ func (c *Client) flushTXIDTrace(browserCtx context.Context, source string) error
 		return nil
 	}
 	var records []map[string]any
-	if err := chromedp.Run(browserCtx,
-		chromedp.Evaluate(`(() => window.__xcliTxids || [])()`, &records),
+	if err := chromedp.Do(browserCtx,
+		evaluateInto(`(() => window.__xcliTxids || [])()`, &records),
 	); err != nil {
 		return err
 	}
@@ -1952,19 +1818,13 @@ func (c *Client) flushTXIDTrace(browserCtx context.Context, source string) error
 			return err
 		}
 	}
-	return chromedp.Run(browserCtx, chromedp.Evaluate(`window.__xcliTxids = []`, nil))
+	return chromedp.Do(browserCtx, runScript(`window.__xcliTxids = []`))
 }
 
 func (c *Client) confirmPostedTweet(profileURL string, needle string) (string, error) {
 	var createdURL string
-	err := c.runBrowserFlow(func(ctx context.Context) error {
+	err := c.runBrowserFlow(chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
 		for i := 0; i < 6; i++ {
-			if err := chromedp.Navigate(profileURL).Do(ctx); err != nil {
-				return err
-			}
-			if err := chromedp.Sleep(2500 * time.Millisecond).Do(ctx); err != nil {
-				return err
-			}
 			script := fmt.Sprintf(`(() => {
 				const needle = %q;
 				for (const article of document.querySelectorAll('article')) {
@@ -1975,7 +1835,12 @@ func (c *Client) confirmPostedTweet(profileURL string, needle string) (string, e
 				}
 				return '';
 			})()`, needle)
-			if err := chromedp.Evaluate(script, &createdURL).Do(ctx); err != nil {
+			_, err := chromedp.Steps(
+				chromedp.Navigate(profileURL),
+				chromedp.Sleep(2500*time.Millisecond),
+				evaluateInto(script, &createdURL),
+			)(ctx, t)
+			if err != nil {
 				return err
 			}
 			if createdURL != "" {
@@ -1983,7 +1848,7 @@ func (c *Client) confirmPostedTweet(profileURL string, needle string) (string, e
 			}
 		}
 		return nil
-	})
+	}))
 	if err != nil {
 		return "", err
 	}
@@ -1991,28 +1856,20 @@ func (c *Client) confirmPostedTweet(profileURL string, needle string) (string, e
 }
 
 func (c *Client) browserTweetAction(id string, selector string, expectedAfter string, action string, message string) (model.ActionResult, error) {
-	err := c.runBrowserFlow(func(ctx context.Context) error {
-		if err := chromedp.Navigate(tweetURL(id)).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(selector, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Click(selector, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.Sleep(1500 * time.Millisecond).Do(ctx); err != nil {
-			return err
-		}
-		return chromedp.WaitVisible(expectedAfter, chromedp.ByQuery).Do(ctx)
-	})
+	err := c.runBrowserFlow(chromedp.Steps(
+		chromedp.Navigate(tweetURL(id)),
+		chromedp.WaitVisible(chromedp.CSS(selector)),
+		chromedp.Click(chromedp.CSS(selector)),
+		chromedp.Sleep(1500*time.Millisecond),
+		chromedp.WaitVisible(chromedp.CSS(expectedAfter)),
+	))
 	if err != nil {
 		return model.ActionResult{}, err
 	}
 	return model.ActionResult{Action: action, Target: id, Success: true, Message: message}, nil
 }
 
-func (c *Client) browserTimeline(pageURL string, count int, afterNavigate func(context.Context) error, source string) (model.TimelineResult, error) {
+func (c *Client) browserTimeline(pageURL string, count int, afterNavigate browserStep, source string) (model.TimelineResult, error) {
 	if c.authSession == nil || len(c.authSession.Cookies) == 0 {
 		return model.TimelineResult{}, errors.New("authenticated browser session required")
 	}
@@ -2039,22 +1896,20 @@ func (c *Client) browserTimeline(pageURL string, count int, afterNavigate func(c
 		Name       string `json:"name"`
 		Text       string `json:"text"`
 	}
-	actions := []chromedp.Action{
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			return setBrowserCookies(ctx, c.authSession.Cookies)
-		}),
+	actions := []browserStep{
+		enableNetwork(),
+		setCookies(c.authSession.Cookies),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(2 * time.Second),
 		chromedp.Navigate(pageURL),
-		chromedp.WaitVisible(`article`, chromedp.ByQuery),
+		chromedp.WaitVisible(chromedp.CSS(`article`)),
 	}
 	if afterNavigate != nil {
-		actions = append(actions, chromedp.ActionFunc(afterNavigate))
+		actions = append(actions, afterNavigate)
 	}
 	actions = append(actions,
 		chromedp.Sleep(2*time.Second),
-		chromedp.Evaluate(`(() => {
+		evaluateInto(`(() => {
 			const seen = new Set();
 			const items = [];
 			for (const article of document.querySelectorAll('article')) {
@@ -2080,7 +1935,7 @@ func (c *Client) browserTimeline(pageURL string, count int, afterNavigate func(c
 		})()`, &rawTweets),
 	)
 
-	err := chromedp.Run(browserCtx, actions...)
+	err := chromedp.Do(browserCtx, actions...)
 	if err != nil {
 		return model.TimelineResult{}, fmt.Errorf("browser timeline failed: %w", err)
 	}
@@ -2130,15 +1985,15 @@ func (c *Client) browserUsers(pageURL string, count int) ([]model.UserProfile, e
 		Bio        string `json:"bio"`
 	}
 
-	err := chromedp.Run(browserCtx,
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error { return setBrowserCookies(ctx, c.authSession.Cookies) }),
+	err := chromedp.Do(browserCtx,
+		enableNetwork(),
+		setCookies(c.authSession.Cookies),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(2*time.Second),
 		chromedp.Navigate(pageURL),
-		chromedp.WaitVisible(`[data-testid="UserCell"]`, chromedp.ByQuery),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="UserCell"]`)),
 		chromedp.Sleep(2*time.Second),
-		chromedp.Evaluate(`(() => {
+		evaluateInto(`(() => {
 			const seen = new Set();
 			const items = [];
 			for (const cell of document.querySelectorAll('[data-testid="UserCell"]')) {
@@ -2175,7 +2030,7 @@ func (c *Client) browserUsers(pageURL string, count int) ([]model.UserProfile, e
 	return users, nil
 }
 
-func setBrowserCookies(ctx context.Context, cookies []*http.Cookie) error {
+func setBrowserCookies(ctx context.Context, s cdp.Session, cookies []*http.Cookie) error {
 	seen := map[string]bool{}
 	for _, cookie := range cookies {
 		if cookie == nil || cookie.Name == "" || cookie.Value == "" {
@@ -2194,11 +2049,13 @@ func setBrowserCookies(ctx context.Context, cookies []*http.Cookie) error {
 		}
 		seen[key] = true
 
-		err := network.SetCookie(cookie.Name, cookie.Value).
-			WithDomain(domain).
-			WithPath("/").
-			WithSecure(true).
-			Do(ctx)
+		_, err := cdp.Call(ctx, s, network.SetCookie, network.SetCookieParams{
+			Name:   cookie.Name,
+			Value:  cookie.Value,
+			Domain: domain,
+			Path:   "/",
+			Secure: new(true),
+		})
 		if err != nil {
 			return err
 		}

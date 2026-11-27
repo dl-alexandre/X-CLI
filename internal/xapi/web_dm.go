@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/dl-alexandre/X-CLI/internal/model"
 )
@@ -38,14 +37,14 @@ func (c *Client) DMInbox(count int) (model.DMInbox, error) {
 		Participant string `json:"participant"`
 	}
 
-	err = chromedp.Run(session.ctx,
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error { return setBrowserCookies(ctx, c.authSession.Cookies) }),
+	err = chromedp.Do(session.ctx,
+		enableNetwork(),
+		setCookies(c.authSession.Cookies),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(2*time.Second),
 		chromedp.Navigate("https://x.com/messages"),
 		chromedp.Sleep(4*time.Second),
-		chromedp.Evaluate(`(() => {
+		evaluateInto(`(() => {
 			const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 			const ignored = new Set(['Messages', 'New message', 'Primary', 'Requests', 'Search Direct Messages', 'Search messages']);
 			const items = [];
@@ -143,14 +142,14 @@ func (c *Client) DMThread(conversationID string, count int) (model.DMThread, err
 		} `json:"messages"`
 	}
 
-	err = chromedp.Run(session.ctx,
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error { return setBrowserCookies(ctx, c.authSession.Cookies) }),
+	err = chromedp.Do(session.ctx,
+		enableNetwork(),
+		setCookies(c.authSession.Cookies),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(2*time.Second),
 		chromedp.Navigate(pageURL),
 		chromedp.Sleep(5*time.Second),
-		chromedp.Evaluate(`(() => {
+		evaluateInto(`(() => {
 			const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 			const ignored = new Set(['Messages', 'Message info', 'Start a new message', 'Write a message']);
 			const title = clean(document.querySelector('main h2')?.innerText || document.querySelector('main h1')?.innerText || '');
@@ -235,15 +234,14 @@ func (c *Client) SendDM(conversationID string, text string) (model.ActionResult,
 	}
 	defer session.Close()
 
-	err = chromedp.Run(session.ctx,
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error { return setBrowserCookies(ctx, c.authSession.Cookies) }),
+	err = chromedp.Do(session.ctx,
+		enableNetwork(),
+		setCookies(c.authSession.Cookies),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(2*time.Second),
 		chromedp.Navigate(pageURL),
 		chromedp.Sleep(4*time.Second),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			var ok bool
+		chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
 			script := fmt.Sprintf(`(() => {
 				const text = %q;
 				const visible = (el) => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
@@ -259,7 +257,8 @@ func (c *Client) SendDM(conversationID string, text string) (model.ActionResult,
 				}
 				return true;
 			})()`, text)
-			if err := chromedp.Evaluate(script, &ok).Do(ctx); err != nil {
+			ok, err := chromedp.Evaluate[bool](script)(ctx, t)
+			if err != nil {
 				return err
 			}
 			if !ok {
@@ -268,8 +267,7 @@ func (c *Client) SendDM(conversationID string, text string) (model.ActionResult,
 			return nil
 		}),
 		chromedp.Sleep(1500*time.Millisecond),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			var ok bool
+		chromedp.Func(func(ctx context.Context, t *chromedp.Target) error {
 			script := `(() => {
 				const visible = (el) => !!el && !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
 				const candidates = Array.from(document.querySelectorAll('button, div[role="button"]'));
@@ -281,7 +279,8 @@ func (c *Client) SendDM(conversationID string, text string) (model.ActionResult,
 				button.click();
 				return true;
 			})()`
-			if err := chromedp.Evaluate(script, &ok).Do(ctx); err != nil {
+			ok, err := chromedp.Evaluate[bool](script)(ctx, t)
+			if err != nil {
 				return err
 			}
 			if !ok {

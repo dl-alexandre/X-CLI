@@ -2,7 +2,6 @@ package xapi
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -148,33 +147,21 @@ func (c *Client) CreatePostWithMedia(text string, mediaID string) (model.ActionR
 	var profileURL string
 	var tweetID string
 
-	mutation, err := c.runBrowserMutation("CreateTweet", func(ctx context.Context) error {
-		if err := chromedp.Navigate("https://x.com/compose/tweet").Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.WaitVisible(`[data-testid="tweetTextarea_0"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-		if err := chromedp.AttributeValue(`[data-testid="AppTabBar_Profile_Link"]`, "href", &profileURL, nil, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
+	steps := []browserStep{
+		chromedp.Navigate("https://x.com/compose/tweet"),
+		chromedp.WaitVisible(chromedp.CSS(`[data-testid="tweetTextarea_0"]`)),
+		profileHrefInto(&profileURL),
+	}
+	if text != "" {
+		steps = append(steps, chromedp.SendKeys(chromedp.CSS(`[data-testid="tweetTextarea_0"]`), text))
+	}
+	steps = append(steps,
+		chromedp.Sleep(2*time.Second),
+		chromedp.Click(chromedp.CSS(`[data-testid="tweetButtonInline"]`)),
+		chromedp.Sleep(3*time.Second),
+	)
 
-		if text != "" {
-			if err := chromedp.SendKeys(`[data-testid="tweetTextarea_0"]`, text, chromedp.ByQuery).Do(ctx); err != nil {
-				return err
-			}
-		}
-
-		if err := chromedp.Sleep(2 * time.Second).Do(ctx); err != nil {
-			return err
-		}
-
-		if err := chromedp.Click(`[data-testid="tweetButtonInline"]`, chromedp.ByQuery).Do(ctx); err != nil {
-			return err
-		}
-
-		return chromedp.Sleep(3 * time.Second).Do(ctx)
-	})
+	mutation, err := c.runBrowserMutation("CreateTweet", chromedp.Steps(steps...))
 
 	if err != nil {
 		return model.ActionResult{}, err

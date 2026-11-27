@@ -77,3 +77,23 @@ jobs:
         test -f Makefile || (echo "❌ Makefile missing" && exit 1)
         test -f README.md || (echo "❌ README.md missing" && exit 1)
         echo "✅ All required project files present on ${{ runner.os }}"
+
+  build-test:
+    name: Go Build and Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up Go
+      uses: actions/setup-go@v7
+      with:
+        go-version-file: 'go.mod'
+
+    - name: Build
+      run: go build ./...
+
+    - name: Vet
+      run: go vet ./...
+
+    - name: Test
+      run: go test -race ./...

@@ -1,7 +1,6 @@
 package xapi
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -9,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/dl-alexandre/X-CLI/internal/model"
 )
@@ -49,16 +47,14 @@ func (c *Client) browserList(pageURL string, listID string) (model.List, error) 
 		URL         string `json:"url"`
 	}
 
-	err = chromedp.Run(session.ctx,
-		network.Enable(),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			return setBrowserCookies(ctx, c.authSession.Cookies)
-		}),
+	err = chromedp.Do(session.ctx,
+		enableNetwork(),
+		setCookies(c.authSession.Cookies),
 		chromedp.Navigate("https://x.com/home"),
 		chromedp.Sleep(2*time.Second),
 		chromedp.Navigate(pageURL),
 		chromedp.Sleep(3*time.Second),
-		chromedp.Evaluate(`(() => {
+		evaluateInto(`(() => {
 			const text = (value) => String(value || '').trim();
 			const meta = (name, attr = 'content') => {
 				const node = document.querySelector(name);
