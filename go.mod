@@ -4,8 +4,8 @@ go 1.26.0
 
 require (
 	github.com/alecthomas/kong v1.17.0
-	github.com/chromedp/cdproto v0.159.2
-	github.com/chromedp/chromedp v0.23.0
+	github.com/chromedp/cdproto v0.160.1
+	github.com/chromedp/chromedp v0.24.0
 	github.com/dl-alexandre/cli-tools v0.0.1
 	github.com/jotaen/kong-completion v0.0.15
 	github.com/mattn/go-isatty v0.0.24
